@@ -1,0 +1,23 @@
+{
+  "name": "vaultrunner",
+  "version": "0.1.0",
+  "description": "Secure 1Password credential autofill for Claude Code - credentials never exposed to AI",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @vaultrunner/mcp-server dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint"
+  },
+  "keywords": [
+    "1password",
+    "mcp",
+    "claude",
+    "autofill",
+    "security"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

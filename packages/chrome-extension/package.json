@@ -1,0 +1,16 @@
+{
+  "name": "@vaultrunner/chrome-extension",
+  "version": "0.1.0",
+  "description": "Chrome extension for VaultRunner - secure credential injection",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "typescript": "^5.7.0"
+  },
+  "license": "MIT"
+}
