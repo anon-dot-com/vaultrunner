@@ -10,6 +10,10 @@ import { join } from "path";
 import { homedir, platform } from "os";
 import { execSync } from "child_process";
 import open from "open";
+import { createInterface } from "readline";
+import { setupGmail, disconnectGmail, readConfig } from "../sources/gmail-oauth.js";
+import { isMessagesConfigured, checkMessagesAccess } from "../sources/messages-reader.js";
+import { getGmailStatus } from "../sources/gmail-reader.js";
 
 const program = new Command();
 
@@ -212,6 +216,26 @@ program
     console.log(`   ${colors.dim}Use get_vault_status tool to check connection${colors.reset}`);
     console.log("");
 
+    // 2FA Sources
+    console.log(`${colors.bold}2FA Code Sources:${colors.reset}`);
+
+    // Messages (macOS)
+    if (isMessagesConfigured()) {
+      console.log(`   ${colors.green}✓${colors.reset} Messages: ${colors.dim}Configured (Full Disk Access granted)${colors.reset}`);
+    } else {
+      const messagesError = checkMessagesAccess();
+      console.log(`   ${colors.yellow}○${colors.reset} Messages: ${colors.dim}${messagesError || "Not configured"}${colors.reset}`);
+    }
+
+    // Gmail
+    const gmailStatus = getGmailStatus();
+    if (gmailStatus.configured) {
+      console.log(`   ${colors.green}✓${colors.reset} Gmail: ${colors.dim}${gmailStatus.email}${colors.reset}`);
+    } else {
+      console.log(`   ${colors.yellow}○${colors.reset} Gmail: ${colors.dim}Not connected (run: vaultrunner setup-gmail)${colors.reset}`);
+    }
+    console.log("");
+
     console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
     console.log("");
   });
@@ -248,6 +272,110 @@ program
     console.log(`  }`);
     console.log(`}${colors.reset}`);
     console.log(`${colors.dim}└──────────────────────────────────────────────────┘${colors.reset}`);
+    console.log("");
+  });
+
+program
+  .command("setup-gmail")
+  .description("Connect Gmail for 2FA code reading")
+  .action(async () => {
+    console.log("");
+    console.log(`${colors.cyan}${colors.bold}Gmail Setup for 2FA Code Reading${colors.reset}`);
+    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
+    console.log("");
+
+    // Check if already configured
+    const gmailStatus = getGmailStatus();
+    if (gmailStatus.configured) {
+      console.log(`${colors.yellow}Gmail is already connected: ${gmailStatus.email}${colors.reset}`);
+      console.log("");
+
+      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      const answer = await new Promise<string>((resolve) => {
+        rl.question("Do you want to reconnect with a different account? (y/N): ", resolve);
+      });
+      rl.close();
+
+      if (answer.toLowerCase() !== "y") {
+        console.log("Setup cancelled.");
+        return;
+      }
+      console.log("");
+    }
+
+    console.log(`To connect Gmail, you need Google OAuth credentials.`);
+    console.log("");
+    console.log(`${colors.bold}Quick Setup:${colors.reset}`);
+    console.log(`1. Go to ${colors.cyan}https://console.cloud.google.com/${colors.reset}`);
+    console.log(`2. Create a new project (or select existing)`);
+    console.log(`3. Enable the Gmail API`);
+    console.log(`4. Go to "Credentials" → "Create Credentials" → "OAuth client ID"`);
+    console.log(`5. Choose "Desktop app" as application type`);
+    console.log(`6. Copy the Client ID and Client Secret`);
+    console.log("");
+
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+
+    const clientId = await new Promise<string>((resolve) => {
+      rl.question(`${colors.bold}Enter Client ID:${colors.reset} `, resolve);
+    });
+
+    const clientSecret = await new Promise<string>((resolve) => {
+      rl.question(`${colors.bold}Enter Client Secret:${colors.reset} `, resolve);
+    });
+
+    rl.close();
+
+    if (!clientId || !clientSecret) {
+      console.log(`${colors.red}Client ID and Secret are required.${colors.reset}`);
+      return;
+    }
+
+    console.log("");
+    console.log(`${colors.dim}Starting OAuth flow...${colors.reset}`);
+
+    const result = await setupGmail(clientId.trim(), clientSecret.trim());
+
+    console.log("");
+    if (result.success) {
+      console.log(`${colors.green}${colors.bold}✓ Gmail connected successfully!${colors.reset}`);
+      console.log(`   Account: ${colors.cyan}${result.email}${colors.reset}`);
+      console.log("");
+      console.log(`You can now use the ${colors.bold}get_2fa_code${colors.reset} tool to read verification codes from Gmail.`);
+    } else {
+      console.log(`${colors.red}${colors.bold}✗ Gmail setup failed${colors.reset}`);
+      console.log(`   Error: ${result.error}`);
+    }
+    console.log("");
+  });
+
+program
+  .command("disconnect-gmail")
+  .description("Disconnect Gmail account")
+  .action(async () => {
+    console.log("");
+
+    const gmailStatus = getGmailStatus();
+    if (!gmailStatus.configured) {
+      console.log(`${colors.yellow}Gmail is not connected.${colors.reset}`);
+      return;
+    }
+
+    console.log(`${colors.bold}Disconnecting Gmail:${colors.reset} ${gmailStatus.email}`);
+
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const answer = await new Promise<string>((resolve) => {
+      rl.question("Are you sure? (y/N): ", resolve);
+    });
+    rl.close();
+
+    if (answer.toLowerCase() !== "y") {
+      console.log("Cancelled.");
+      return;
+    }
+
+    disconnectGmail();
+    console.log(`${colors.green}✓ Gmail disconnected.${colors.reset}`);
     console.log("");
   });
 

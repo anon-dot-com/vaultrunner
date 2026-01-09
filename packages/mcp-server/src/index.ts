@@ -9,6 +9,7 @@ import { fillCredentialsTool } from "./tools/fill-credentials.js";
 import { getTotpTool } from "./tools/get-totp.js";
 import { clickSubmitTool } from "./tools/click-submit.js";
 import { fillTotpTool } from "./tools/fill-totp.js";
+import { get2faCodeTool } from "./tools/get-2fa-code.js";
 
 const server = new McpServer({
   name: "vaultrunner",
@@ -56,6 +57,13 @@ server.tool(
   fillTotpTool.description,
   fillTotpTool.inputSchema.shape,
   fillTotpTool.handler
+);
+
+server.tool(
+  get2faCodeTool.name,
+  get2faCodeTool.description,
+  get2faCodeTool.inputSchema.shape,
+  get2faCodeTool.handler
 );
 
 // Start the extension bridge (WebSocket server)

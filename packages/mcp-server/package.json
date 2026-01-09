@@ -18,13 +18,16 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@puppeteer/browsers": "^2.11.0",
+    "better-sqlite3": "^11.0.0",
     "commander": "^14.0.2",
     "execa": "^9.0.0",
+    "googleapis": "^144.0.0",
     "open": "^11.0.0",
     "ws": "^8.18.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^22.0.0",
     "@types/ws": "^8.5.0",
     "typescript": "^5.7.0"
