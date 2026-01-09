@@ -31,3 +31,4 @@ pnpm-debug.log*
 # Chrome extension
 *.crx
 *.pem
+*.zip

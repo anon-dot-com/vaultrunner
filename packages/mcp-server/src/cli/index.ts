@@ -379,4 +379,138 @@ program
     console.log("");
   });
 
+program
+  .command("setup-messages")
+  .description("Set up Messages (SMS/iMessage) for 2FA code reading")
+  .action(async () => {
+    console.log("");
+    console.log(`${colors.cyan}${colors.bold}Messages Setup for 2FA Code Reading${colors.reset}`);
+    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
+    console.log("");
+
+    // Check platform
+    if (platform() !== "darwin") {
+      console.log(`${colors.red}✗ Messages reading is only available on macOS.${colors.reset}`);
+      console.log("");
+      return;
+    }
+
+    // Check current status
+    if (isMessagesConfigured()) {
+      console.log(`${colors.green}✓ Messages is already configured and working!${colors.reset}`);
+      console.log("");
+      console.log(`Your terminal app has Full Disk Access and can read the Messages database.`);
+      console.log("");
+      return;
+    }
+
+    // Show instructions
+    const error = checkMessagesAccess();
+    console.log(`${colors.yellow}⚠ ${error}${colors.reset}`);
+    console.log("");
+    console.log(`${colors.bold}To enable Messages reading, you need to grant Full Disk Access:${colors.reset}`);
+    console.log("");
+    console.log(`${colors.cyan}Step 1:${colors.reset} Open System Settings`);
+    console.log(`        You can do this by clicking the Apple menu → System Settings`);
+    console.log("");
+    console.log(`${colors.cyan}Step 2:${colors.reset} Navigate to Privacy & Security`);
+    console.log(`        Click "Privacy & Security" in the sidebar`);
+    console.log("");
+    console.log(`${colors.cyan}Step 3:${colors.reset} Find Full Disk Access`);
+    console.log(`        Scroll down and click "Full Disk Access"`);
+    console.log("");
+    console.log(`${colors.cyan}Step 4:${colors.reset} Add your terminal app`);
+    console.log(`        Click the + button and add one of these:`);
+    console.log(`        • Terminal (in /Applications/Utilities/)`);
+    console.log(`        • iTerm (if you use iTerm2)`);
+    console.log(`        • Your IDE's terminal (VS Code, Cursor, etc.)`);
+    console.log("");
+    console.log(`${colors.cyan}Step 5:${colors.reset} Restart your terminal`);
+    console.log(`        Close and reopen your terminal for changes to take effect`);
+    console.log("");
+
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const answer = await new Promise<string>((resolve) => {
+      rl.question(`${colors.bold}Open System Settings now? (Y/n):${colors.reset} `, resolve);
+    });
+    rl.close();
+
+    if (answer.toLowerCase() !== "n") {
+      console.log("");
+      console.log(`${colors.dim}Opening System Settings...${colors.reset}`);
+      // Open directly to Full Disk Access pane
+      execSync("open 'x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles'");
+      console.log("");
+      console.log(`${colors.yellow}After granting access, restart your terminal and run:${colors.reset}`);
+      console.log(`   ${colors.cyan}vaultrunner setup-messages${colors.reset}`);
+      console.log("");
+      console.log(`to verify it's working.`);
+    }
+    console.log("");
+  });
+
+program
+  .command("test-2fa")
+  .description("Test 2FA code reading from configured sources")
+  .action(async () => {
+    console.log("");
+    console.log(`${colors.cyan}${colors.bold}Testing 2FA Code Reading${colors.reset}`);
+    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
+    console.log("");
+
+    // Check Messages
+    console.log(`${colors.bold}Messages (SMS/iMessage):${colors.reset}`);
+    if (platform() !== "darwin") {
+      console.log(`   ${colors.dim}Not available (macOS only)${colors.reset}`);
+    } else if (isMessagesConfigured()) {
+      console.log(`   ${colors.green}✓${colors.reset} Configured - attempting to read recent messages...`);
+      try {
+        // Dynamic import to avoid errors on non-macOS
+        const { getRecentMessages } = await import("../sources/messages-reader.js");
+        const messages = getRecentMessages(3600); // Last hour
+        console.log(`   ${colors.green}✓${colors.reset} Success! Found ${messages.length} messages in the last hour`);
+        if (messages.length > 0) {
+          console.log(`   ${colors.dim}Most recent: "${messages[0].text.substring(0, 40)}..."${colors.reset}`);
+        }
+      } catch (err) {
+        const error = err instanceof Error ? err.message : "Unknown error";
+        console.log(`   ${colors.red}✗${colors.reset} Error: ${error}`);
+      }
+    } else {
+      const error = checkMessagesAccess();
+      console.log(`   ${colors.yellow}○${colors.reset} Not configured: ${colors.dim}${error}${colors.reset}`);
+      console.log(`   ${colors.dim}Run: vaultrunner setup-messages${colors.reset}`);
+    }
+    console.log("");
+
+    // Check Gmail
+    console.log(`${colors.bold}Gmail:${colors.reset}`);
+    const gmailStatus = getGmailStatus();
+    if (gmailStatus.configured) {
+      console.log(`   ${colors.green}✓${colors.reset} Configured: ${gmailStatus.email}`);
+      console.log(`   ${colors.dim}Attempting to search Gmail...${colors.reset}`);
+      try {
+        const { searchGmailForCode } = await import("../sources/gmail-reader.js");
+        const result = await searchGmailForCode({ maxAgeSeconds: 3600 });
+        if (result.error) {
+          console.log(`   ${colors.yellow}⚠${colors.reset} ${result.error}`);
+        } else if (result.found) {
+          console.log(`   ${colors.green}✓${colors.reset} Found a code: ${result.code} from ${result.sender}`);
+        } else {
+          console.log(`   ${colors.green}✓${colors.reset} Connection working (no verification codes in last hour)`);
+        }
+      } catch (err) {
+        const error = err instanceof Error ? err.message : "Unknown error";
+        console.log(`   ${colors.red}✗${colors.reset} Error: ${error}`);
+      }
+    } else {
+      console.log(`   ${colors.yellow}○${colors.reset} Not configured`);
+      console.log(`   ${colors.dim}Run: vaultrunner setup-gmail${colors.reset}`);
+    }
+    console.log("");
+
+    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
+    console.log("");
+  });
+
 program.parse();
