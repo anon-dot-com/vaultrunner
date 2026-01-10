@@ -262,7 +262,7 @@ cd vaultrunner && pnpm install && pnpm build
 
 ## License
 
-MIT © [Anon](https://anon.com)
+MIT © [Anonymity Labs, Inc.](https://anon.com)
 
 ---
 
