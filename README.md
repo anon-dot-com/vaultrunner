@@ -12,8 +12,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/danielgmason/vaultrunner/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License"></a>
-  <a href="https://github.com/danielgmason/vaultrunner/stargazers"><img src="https://img.shields.io/github/stars/danielgmason/vaultrunner?style=flat-square" alt="GitHub stars"></a>
+  <a href="https://github.com/anon-dot-com/vaultrunner/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License"></a>
+  <a href="https://github.com/anon-dot-com/vaultrunner/stargazers"><img src="https://img.shields.io/github/stars/anon-dot-com/vaultrunner?style=flat-square" alt="GitHub stars"></a>
 </p>
 
 <p align="center">
@@ -248,7 +248,7 @@ npx vaultrunner dashboard  # Open web dashboard
 ## Development
 
 ```bash
-git clone https://github.com/danielgmason/vaultrunner.git
+git clone https://github.com/anon-dot-com/vaultrunner.git
 cd vaultrunner && pnpm install && pnpm build
 ```
 
