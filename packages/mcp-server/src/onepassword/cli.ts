@@ -165,10 +165,10 @@ export class OnePasswordCLI {
   }
 
   /**
-   * Get item info (title, username, vault) for access control
+   * Get item info (title, username, vault, url) for access control and session tracking
    * Does NOT return password
    */
-  async getItemInfo(itemId: string): Promise<{ title: string; username: string; vault: string } | null> {
+  async getItemInfo(itemId: string): Promise<{ title: string; username: string; vault: string; url?: string; domain?: string } | null> {
     try {
       const { stdout } = await execa("op", [
         "item",
@@ -181,14 +181,34 @@ export class OnePasswordCLI {
         title: string;
         vault: { name: string };
         fields?: Array<{ id: string; value: string }>;
+        urls?: Array<{ href: string; primary?: boolean }>;
       };
 
       const username = item.fields?.find((f) => f.id === "username")?.value || "Unknown";
+
+      // Get the primary URL or the first URL
+      const primaryUrl = item.urls?.find((u) => u.primary)?.href || item.urls?.[0]?.href;
+      let domain: string | undefined;
+
+      if (primaryUrl) {
+        try {
+          let href = primaryUrl;
+          if (!href.includes("://")) {
+            href = "https://" + href;
+          }
+          domain = new URL(href).hostname;
+        } catch {
+          // If URL parsing fails, try to extract domain simply
+          domain = primaryUrl.replace(/^https?:\/\//, "").split("/")[0];
+        }
+      }
 
       return {
         title: item.title,
         username,
         vault: item.vault.name,
+        url: primaryUrl,
+        domain,
       };
     } catch (error) {
       console.error("Error getting item info:", error);

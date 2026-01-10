@@ -3,6 +3,7 @@ import { onePasswordCLI } from "../onepassword/cli.js";
 import { extensionBridge } from "../bridge/extension-bridge.js";
 import { logger } from "../utils/logger.js";
 import { checkAccess, type AccessCheckResult } from "../access/access-control.js";
+import { loginHistory } from "../learning/login-history.js";
 
 export const fillCredentialsTool = {
   name: "fill_credentials",
@@ -151,6 +152,48 @@ export const fillCredentialsTool = {
       logger.actionEnd(true, `Filled: ${result.filledFields?.join(", ") || "fields"}`);
     } else {
       logger.actionEnd(false, result.error || "Fill failed");
+    }
+
+    // Auto-start a session if one doesn't exist, then log
+    let activeSession = loginHistory.getCurrentAttempt();
+
+    // If there's an existing session for a DIFFERENT domain, complete it first
+    if (activeSession && itemInfo.domain && activeSession.domain !== itemInfo.domain) {
+      const hasSteps = (activeSession.steps?.length || 0) > 0;
+      if (hasSteps) {
+        // Had some activity, mark as success (likely completed but wasn't detected)
+        loginHistory.completeAttempt("success", "Auto-completed when new login started");
+        logger.step(`Auto-completed previous session for ${activeSession.domain}`);
+      } else {
+        // No steps, was abandoned
+        loginHistory.completeAttempt("abandoned", "Abandoned when new login started");
+        logger.step(`Abandoned previous session for ${activeSession.domain}`);
+      }
+      activeSession = null; // Reset so we create a new one
+    }
+
+    if (!activeSession && itemInfo.domain) {
+      // Auto-start a session for this login
+      const loginUrl = itemInfo.url || `https://${itemInfo.domain}`;
+      loginHistory.startAttempt(itemInfo.domain, loginUrl, {
+        username: itemInfo.username,
+        itemTitle: itemInfo.title,
+      });
+      activeSession = loginHistory.getCurrentAttempt();
+      logger.step(`Started tracking login session for ${itemInfo.domain}`);
+    }
+
+    if (activeSession) {
+      // Always record the username/title for this login attempt
+      loginHistory.setUserInfo(itemInfo.username, itemInfo.title);
+
+      const filledFields = result.filledFields || [];
+      loginHistory.logStep(
+        "fill_credentials",
+        result.success ? (filledFields.length > 1 ? "success" : "partial") : "failed",
+        { item_id, username: itemInfo.username },
+        `Filled: ${filledFields.join(", ") || "none"}`
+      );
     }
 
     // Return only success/failure - NO credentials

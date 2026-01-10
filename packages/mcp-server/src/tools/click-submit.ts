@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { extensionBridge } from "../bridge/extension-bridge.js";
 import { logger } from "../utils/logger.js";
+import { loginHistory } from "../learning/login-history.js";
 
 export const clickSubmitTool = {
   name: "click_submit",
@@ -42,6 +43,17 @@ export const clickSubmitTool = {
       logger.success(`Clicked: ${result.clicked}`);
     } else {
       logger.error(`Click failed: ${result.error}`);
+    }
+
+    // Auto-log to active session if one exists
+    const activeSession = loginHistory.getCurrentAttempt();
+    if (activeSession) {
+      loginHistory.logStep(
+        "click_button", // click_submit uses the same step type
+        result.success ? "success" : "failed",
+        { type: "submit" },
+        result.clicked || result.error
+      );
     }
 
     return {

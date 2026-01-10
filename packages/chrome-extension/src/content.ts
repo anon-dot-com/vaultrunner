@@ -5,6 +5,10 @@
  * This script runs in the context of web pages.
  */
 
+interface PingMessage {
+  type: "ping";
+}
+
 interface FillMessage {
   type: "fill_credentials";
   credentials: {
@@ -22,7 +26,13 @@ interface FillTotpMessage {
   code: string;
 }
 
-type Message = FillMessage | ClickSubmitMessage | FillTotpMessage;
+interface ClickButtonMessage {
+  type: "click_button";
+  buttonText: string;
+  excludeTexts?: string[];
+}
+
+type Message = PingMessage | FillMessage | ClickSubmitMessage | FillTotpMessage | ClickButtonMessage;
 
 interface FillResult {
   success: boolean;
@@ -201,43 +211,60 @@ function fillCredentials(credentials: {
 }
 
 /**
+ * Check if a button is a social login button (Google, Apple, Facebook, etc.)
+ */
+function isSocialLoginButton(button: HTMLElement): boolean {
+  const text = button.textContent?.toLowerCase() || "";
+  const ariaLabel = button.getAttribute("aria-label")?.toLowerCase() || "";
+  const combined = text + " " + ariaLabel;
+
+  const socialKeywords = ["google", "apple", "facebook", "twitter", "microsoft", "github", "linkedin"];
+  return socialKeywords.some(keyword => combined.includes(keyword));
+}
+
+/**
  * Find and click a submit button
  */
 function clickSubmit(): ClickResult {
-  // Common selectors for submit buttons
-  const selectors = [
+  const buttons = document.querySelectorAll<HTMLButtonElement>("button");
+
+  // Priority 1: Look for "Next" button specifically (for multi-step logins)
+  for (const button of buttons) {
+    const text = button.textContent?.toLowerCase().trim() || "";
+    if (text === "next" && isVisible(button) && !isSocialLoginButton(button)) {
+      button.click();
+      return {
+        success: true,
+        clicked: `button with text "Next"`,
+      };
+    }
+  }
+
+  // Priority 2: Try explicit submit buttons (not social login)
+  const submitSelectors = [
     'button[type="submit"]',
     'input[type="submit"]',
-    'button:contains("Sign in")',
-    'button:contains("Log in")',
-    'button:contains("Continue")',
-    'button:contains("Submit")',
-    '[role="button"][type="submit"]',
   ];
 
-  // Try explicit submit buttons first
-  for (const selector of selectors) {
-    try {
-      const button = document.querySelector<HTMLElement>(selector);
-      if (button && isVisible(button)) {
-        button.click();
+  for (const selector of submitSelectors) {
+    const elements = document.querySelectorAll<HTMLElement>(selector);
+    for (const element of elements) {
+      if (isVisible(element) && !isSocialLoginButton(element)) {
+        element.click();
         return {
           success: true,
           clicked: selector,
         };
       }
-    } catch {
-      // Selector might be invalid (e.g., :contains), continue
     }
   }
 
-  // Fallback: find buttons by text content
-  const buttons = document.querySelectorAll<HTMLButtonElement>("button");
-  const submitTexts = ["sign in", "log in", "login", "continue", "submit", "next"];
+  // Priority 3: Find buttons by text content (excluding social login)
+  const submitTexts = ["sign in", "log in", "login", "continue", "submit"];
 
   for (const button of buttons) {
     const text = button.textContent?.toLowerCase().trim() || "";
-    if (submitTexts.some((t) => text.includes(t)) && isVisible(button)) {
+    if (submitTexts.some((t) => text.includes(t)) && isVisible(button) && !isSocialLoginButton(button)) {
       button.click();
       return {
         success: true,
@@ -246,14 +273,14 @@ function clickSubmit(): ClickResult {
     }
   }
 
-  // Last resort: find any submit button in a form
+  // Priority 4: Find any submit button in a form (not social login)
   const forms = document.querySelectorAll("form");
   for (const form of forms) {
     const submitBtn = form.querySelector<HTMLElement>(
       'button[type="submit"], input[type="submit"], button:not([type])'
     );
-    if (submitBtn && isVisible(submitBtn)) {
-      (submitBtn as HTMLElement).click();
+    if (submitBtn && isVisible(submitBtn) && !isSocialLoginButton(submitBtn)) {
+      submitBtn.click();
       return {
         success: true,
         clicked: "form submit button",
@@ -264,6 +291,39 @@ function clickSubmit(): ClickResult {
   return {
     success: false,
     error: "Could not find a submit button",
+  };
+}
+
+/**
+ * Click a button by its text content
+ */
+function clickButtonByText(buttonText: string, excludeTexts: string[] = []): ClickResult {
+  const buttons = document.querySelectorAll<HTMLButtonElement>("button");
+  const targetText = buttonText.toLowerCase().trim();
+
+  for (const button of buttons) {
+    const text = button.textContent?.toLowerCase().trim() || "";
+
+    // Check if this button matches the target text
+    if (text.includes(targetText) && isVisible(button)) {
+      // Check if it should be excluded
+      const shouldExclude = excludeTexts.some(excludeText =>
+        text.includes(excludeText.toLowerCase())
+      );
+
+      if (!shouldExclude) {
+        button.click();
+        return {
+          success: true,
+          clicked: `button with text "${button.textContent?.trim()}"`,
+        };
+      }
+    }
+  }
+
+  return {
+    success: false,
+    error: `Could not find button with text "${buttonText}"`,
   };
 }
 
@@ -312,11 +372,16 @@ chrome.runtime.onMessage.addListener(
   (
     message: Message,
     _sender: chrome.runtime.MessageSender,
-    sendResponse: (response: FillResult | ClickResult) => void
+    sendResponse: (response: FillResult | ClickResult | { pong: boolean }) => void
   ) => {
     console.log("[VaultRunner] Received message:", message.type);
 
     switch (message.type) {
+      case "ping": {
+        // Respond to ping to indicate content script is loaded
+        sendResponse({ pong: true });
+        break;
+      }
       case "fill_credentials": {
         const result = fillCredentials(message.credentials);
         console.log("[VaultRunner] Fill result:", result);
@@ -332,6 +397,12 @@ chrome.runtime.onMessage.addListener(
       case "fill_totp": {
         const result = fillTotp(message.code);
         console.log("[VaultRunner] TOTP fill result:", result);
+        sendResponse(result);
+        break;
+      }
+      case "click_button": {
+        const result = clickButtonByText(message.buttonText, message.excludeTexts);
+        console.log("[VaultRunner] Click button result:", result);
         sendResponse(result);
         break;
       }

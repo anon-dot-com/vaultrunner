@@ -37,10 +37,20 @@ interface FillTotpRequest {
   };
 }
 
-type BridgeRequest = FillRequest | ClickSubmitRequest | FillTotpRequest;
+interface ClickButtonRequest {
+  type: "click_button";
+  id: string;
+  payload: {
+    tabId?: number;
+    buttonText: string;
+    excludeTexts?: string[];
+  };
+}
+
+type BridgeRequest = FillRequest | ClickSubmitRequest | FillTotpRequest | ClickButtonRequest;
 
 interface BridgeResponse {
-  type: "fill_result" | "click_result" | "totp_result";
+  type: "fill_result" | "click_result" | "totp_result" | "button_click_result";
   id: string;
   payload: {
     success: boolean;
@@ -52,6 +62,79 @@ interface BridgeResponse {
 
 let socket: WebSocket | null = null;
 let isConnecting = false;
+
+const MAX_CONTENT_SCRIPT_RETRIES = 3;
+const RETRY_DELAY_MS = 500;
+
+/**
+ * Ensure content script is loaded in the tab
+ * Returns true if content script is ready, false otherwise
+ */
+async function ensureContentScriptLoaded(tabId: number): Promise<boolean> {
+  try {
+    // First check if content script is already loaded by sending a ping
+    const response = await chrome.tabs.sendMessage(tabId, { type: "ping" });
+    return response?.pong === true;
+  } catch {
+    // Content script not loaded - try to inject it
+    console.log(`[VaultRunner] Content script not loaded in tab ${tabId}, injecting...`);
+
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ["dist/content.js"],
+      });
+      console.log(`[VaultRunner] Content script injected into tab ${tabId}`);
+
+      // Wait a bit for the script to initialize
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return true;
+    } catch (injectError) {
+      console.error(`[VaultRunner] Failed to inject content script:`, injectError);
+      return false;
+    }
+  }
+}
+
+/**
+ * Send a message to a tab with automatic content script injection and retry
+ */
+async function sendMessageWithRetry<T>(
+  tabId: number,
+  message: unknown,
+  retries = MAX_CONTENT_SCRIPT_RETRIES
+): Promise<T> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      // Try to send the message
+      const response = await chrome.tabs.sendMessage(tabId, message);
+      return response as T;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      // Check if this is a "receiving end does not exist" error
+      if (errorMessage.includes("Receiving end does not exist") ||
+          errorMessage.includes("Could not establish connection")) {
+
+        if (attempt < retries) {
+          console.log(`[VaultRunner] Content script not ready (attempt ${attempt + 1}/${retries + 1}), retrying...`);
+
+          // Try to inject content script
+          await ensureContentScriptLoaded(tabId);
+
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * (attempt + 1)));
+          continue;
+        }
+      }
+
+      // If we've exhausted retries or it's a different error, throw
+      throw error;
+    }
+  }
+
+  throw new Error("Failed to send message after all retries");
+}
 
 /**
  * Connect to the MCP server's WebSocket bridge
@@ -86,6 +169,9 @@ function connect(): void {
           break;
         case "fill_totp":
           response = await handleFillTotpRequest(message);
+          break;
+        case "click_button":
+          response = await handleClickButtonRequest(message);
           break;
         default:
           console.error("[VaultRunner] Unknown message type:", message);
@@ -150,10 +236,10 @@ async function handleFillRequest(request: FillRequest): Promise<BridgeResponse> 
       };
     }
 
-    const response = await chrome.tabs.sendMessage(targetTabId, {
-      type: "fill_credentials",
-      credentials,
-    });
+    const response = await sendMessageWithRetry<{ success: boolean; filledFields?: string[]; error?: string }>(
+      targetTabId,
+      { type: "fill_credentials", credentials }
+    );
 
     return {
       type: "fill_result",
@@ -197,9 +283,10 @@ async function handleClickSubmitRequest(request: ClickSubmitRequest): Promise<Br
       };
     }
 
-    const response = await chrome.tabs.sendMessage(targetTabId, {
-      type: "click_submit",
-    });
+    const response = await sendMessageWithRetry<{ success: boolean; clicked?: string; error?: string }>(
+      targetTabId,
+      { type: "click_submit" }
+    );
 
     return {
       type: "click_result",
@@ -242,10 +329,10 @@ async function handleFillTotpRequest(request: FillTotpRequest): Promise<BridgeRe
       };
     }
 
-    const response = await chrome.tabs.sendMessage(targetTabId, {
-      type: "fill_totp",
-      code,
-    });
+    const response = await sendMessageWithRetry<{ success: boolean; filledFields?: string[]; error?: string }>(
+      targetTabId,
+      { type: "fill_totp", code }
+    );
 
     return {
       type: "totp_result",
@@ -259,6 +346,52 @@ async function handleFillTotpRequest(request: FillTotpRequest): Promise<BridgeRe
   } catch (error) {
     return {
       type: "totp_result",
+      id,
+      payload: {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+    };
+  }
+}
+
+/**
+ * Handle a click button request from the MCP server
+ */
+async function handleClickButtonRequest(request: ClickButtonRequest): Promise<BridgeResponse> {
+  const { id, payload } = request;
+  const { tabId, buttonText, excludeTexts } = payload;
+
+  try {
+    const targetTabId = await getTargetTabId(tabId);
+    if (!targetTabId) {
+      return {
+        type: "button_click_result",
+        id,
+        payload: {
+          success: false,
+          error: "No active tab found",
+        },
+      };
+    }
+
+    const response = await sendMessageWithRetry<{ success: boolean; clicked?: string; error?: string }>(
+      targetTabId,
+      { type: "click_button", buttonText, excludeTexts }
+    );
+
+    return {
+      type: "button_click_result",
+      id,
+      payload: {
+        success: response.success,
+        clicked: response.clicked,
+        error: response.error,
+      },
+    };
+  } catch (error) {
+    return {
+      type: "button_click_result",
       id,
       payload: {
         success: false,
