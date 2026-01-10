@@ -7,6 +7,7 @@ import { z } from "zod";
 import { logger } from "../utils/logger.js";
 import { isMessagesConfigured, searchMessagesForCode } from "../sources/messages-reader.js";
 import { searchGmailForCode, getGmailStatus } from "../sources/gmail-reader.js";
+import { loginHistory } from "../learning/login-history.js";
 
 export const get2faCodeTool = {
   name: "get_2fa_code",
@@ -61,6 +62,18 @@ export const get2faCodeTool = {
 
       if (messagesResult.found && messagesResult.code) {
         logger.actionEnd(true, `Found code ${messagesResult.code} from Messages`);
+
+        // Auto-log to active session if one exists
+        const activeSession = loginHistory.getCurrentAttempt();
+        if (activeSession) {
+          loginHistory.logStep(
+            "get_2fa_code",
+            "success",
+            { source: "messages", sender: messagesResult.sender },
+            `Found code from ${messagesResult.sender || "Messages"}`
+          );
+        }
+
         return {
           content: [{
             type: "text" as const,
@@ -92,6 +105,18 @@ export const get2faCodeTool = {
 
       if (gmailResult.found && gmailResult.code) {
         logger.actionEnd(true, `Found code ${gmailResult.code} from Gmail`);
+
+        // Auto-log to active session if one exists
+        const activeSession = loginHistory.getCurrentAttempt();
+        if (activeSession) {
+          loginHistory.logStep(
+            "get_2fa_code",
+            "success",
+            { source: "gmail", sender: gmailResult.sender },
+            `Found code from ${gmailResult.sender || "Gmail"}`
+          );
+        }
+
         return {
           content: [{
             type: "text" as const,
@@ -119,6 +144,18 @@ export const get2faCodeTool = {
 
     // No code found in any source
     logger.actionEnd(false, "No verification code found");
+
+    // Auto-log to active session if one exists
+    const activeSession = loginHistory.getCurrentAttempt();
+    if (activeSession) {
+      loginHistory.logStep(
+        "get_2fa_code",
+        "failed",
+        { source, configuredSources },
+        "No code found"
+      );
+    }
+
     return {
       content: [{
         type: "text" as const,

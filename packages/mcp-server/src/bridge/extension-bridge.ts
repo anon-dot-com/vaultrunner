@@ -158,6 +158,13 @@ export class ExtensionBridge {
   }
 
   /**
+   * Click a button by its text content
+   */
+  async clickButton(buttonText: string, excludeTexts?: string[], tabId?: number): Promise<ResponsePayload> {
+    return this.sendRequest("click_button", { tabId, buttonText, excludeTexts });
+  }
+
+  /**
    * Handle incoming messages from the extension
    */
   private handleMessage(message: Response): void {

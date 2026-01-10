@@ -10,7 +10,7 @@
     "vaultrunner-mcp": "dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp -r src/dashboard/public dist/dashboard/",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "lint": "tsc --noEmit"
@@ -18,9 +18,11 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@puppeteer/browsers": "^2.11.0",
+    "@types/express": "^5.0.6",
     "better-sqlite3": "^11.0.0",
     "commander": "^14.0.2",
     "execa": "^9.0.0",
+    "express": "^5.2.1",
     "googleapis": "^144.0.0",
     "open": "^11.0.0",
     "ws": "^8.18.0",

@@ -2,21 +2,27 @@ import { z } from "zod";
 import { onePasswordCLI } from "../onepassword/cli.js";
 import { extensionBridge } from "../bridge/extension-bridge.js";
 import { logger } from "../utils/logger.js";
+import { loginHistory } from "../learning/login-history.js";
 
 export const fillTotpTool = {
   name: "fill_totp",
   description:
-    "Get the TOTP code from 1Password and fill it into the current page's verification code field. Use this for two-factor authentication.",
+    "Fill a TOTP/verification code into the current page. Either provide an item_id to fetch from 1Password, or provide a code directly (e.g., from get_2fa_code).",
   inputSchema: z.object({
     item_id: z
       .string()
-      .describe("The 1Password item ID (obtained from list_logins)"),
+      .optional()
+      .describe("The 1Password item ID (obtained from list_logins). Required if code is not provided."),
+    code: z
+      .string()
+      .optional()
+      .describe("The verification code to fill directly (e.g., from get_2fa_code). If provided, item_id is not needed."),
     tab_id: z
       .number()
       .optional()
       .describe("Optional browser tab ID to fill TOTP in"),
   }),
-  handler: async ({ item_id, tab_id }: { item_id: string; tab_id?: number }) => {
+  handler: async ({ item_id, code, tab_id }: { item_id?: string; code?: string; tab_id?: number }) => {
     logger.info("Filling TOTP code...");
 
     if (!extensionBridge.isConnected()) {
@@ -39,12 +45,38 @@ export const fillTotpTool = {
       };
     }
 
-    // Get TOTP from 1Password
-    logger.step("Fetching TOTP from 1Password...");
-    const totp = await onePasswordCLI.getTOTP(item_id);
+    let totp: string | null = null;
 
-    if (!totp) {
-      logger.error("Could not retrieve TOTP");
+    // If code is provided directly, use it
+    if (code) {
+      logger.step("Using provided verification code");
+      totp = code;
+    } else if (item_id) {
+      // Get TOTP from 1Password
+      logger.step("Fetching TOTP from 1Password...");
+      totp = await onePasswordCLI.getTOTP(item_id);
+
+      if (!totp) {
+        logger.error("Could not retrieve TOTP");
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify(
+                {
+                  success: false,
+                  error: `Could not retrieve TOTP for item "${item_id}". The item may not have TOTP configured, or the vault may be locked.`,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+      logger.step("TOTP retrieved (not shown)");
+    } else {
+      logger.error("No code or item_id provided");
       return {
         content: [
           {
@@ -52,7 +84,7 @@ export const fillTotpTool = {
             text: JSON.stringify(
               {
                 success: false,
-                error: `Could not retrieve TOTP for item "${item_id}". The item may not have TOTP configured, or the vault may be locked.`,
+                error: "Either 'code' or 'item_id' must be provided.",
               },
               null,
               2
@@ -61,7 +93,6 @@ export const fillTotpTool = {
         ],
       };
     }
-    logger.step("TOTP retrieved (not shown)");
 
     // Fill TOTP into the page (TOTP goes through extension, not returned to Claude)
     logger.step("Sending to browser extension...");
@@ -71,6 +102,17 @@ export const fillTotpTool = {
       logger.success("TOTP code filled");
     } else {
       logger.error(`Fill failed: ${result.error}`);
+    }
+
+    // Auto-log to active session if one exists
+    const activeSession = loginHistory.getCurrentAttempt();
+    if (activeSession) {
+      loginHistory.logStep(
+        "fill_totp",
+        result.success ? "success" : "failed",
+        { source: code ? "direct" : "1password" },
+        result.error
+      );
     }
 
     return {

@@ -8,8 +8,22 @@ import { listLoginsTool } from "./tools/list-logins.js";
 import { fillCredentialsTool } from "./tools/fill-credentials.js";
 import { getTotpTool } from "./tools/get-totp.js";
 import { clickSubmitTool } from "./tools/click-submit.js";
+import { clickButtonTool } from "./tools/click-button.js";
 import { fillTotpTool } from "./tools/fill-totp.js";
 import { get2faCodeTool } from "./tools/get-2fa-code.js";
+import { smartLoginTool } from "./tools/smart-login.js";
+import { loginStatsTool } from "./tools/login-stats.js";
+import {
+  startLoginSessionTool,
+  endLoginSessionTool,
+  logLoginStepTool,
+  getLoginSessionTool,
+} from "./tools/login-session.js";
+import {
+  setAccountPreferenceTool,
+  getAccountPreferenceTool,
+  clearAccountPreferenceTool,
+} from "./tools/set-account-preference.js";
 
 const server = new McpServer({
   name: "vaultrunner",
@@ -53,6 +67,13 @@ server.tool(
 );
 
 server.tool(
+  clickButtonTool.name,
+  clickButtonTool.description,
+  clickButtonTool.inputSchema.shape,
+  clickButtonTool.handler
+);
+
+server.tool(
   fillTotpTool.name,
   fillTotpTool.description,
   fillTotpTool.inputSchema.shape,
@@ -64,6 +85,69 @@ server.tool(
   get2faCodeTool.description,
   get2faCodeTool.inputSchema.shape,
   get2faCodeTool.handler
+);
+
+server.tool(
+  smartLoginTool.name,
+  smartLoginTool.description,
+  smartLoginTool.inputSchema.shape,
+  smartLoginTool.handler
+);
+
+server.tool(
+  loginStatsTool.name,
+  loginStatsTool.description,
+  loginStatsTool.inputSchema.shape,
+  loginStatsTool.handler
+);
+
+server.tool(
+  startLoginSessionTool.name,
+  startLoginSessionTool.description,
+  startLoginSessionTool.inputSchema.shape,
+  startLoginSessionTool.handler
+);
+
+server.tool(
+  endLoginSessionTool.name,
+  endLoginSessionTool.description,
+  endLoginSessionTool.inputSchema.shape,
+  endLoginSessionTool.handler
+);
+
+server.tool(
+  logLoginStepTool.name,
+  logLoginStepTool.description,
+  logLoginStepTool.inputSchema.shape,
+  logLoginStepTool.handler
+);
+
+server.tool(
+  getLoginSessionTool.name,
+  getLoginSessionTool.description,
+  getLoginSessionTool.inputSchema.shape,
+  getLoginSessionTool.handler
+);
+
+server.tool(
+  setAccountPreferenceTool.name,
+  setAccountPreferenceTool.description,
+  setAccountPreferenceTool.inputSchema.shape,
+  setAccountPreferenceTool.handler
+);
+
+server.tool(
+  getAccountPreferenceTool.name,
+  getAccountPreferenceTool.description,
+  getAccountPreferenceTool.inputSchema.shape,
+  getAccountPreferenceTool.handler
+);
+
+server.tool(
+  clearAccountPreferenceTool.name,
+  clearAccountPreferenceTool.description,
+  clearAccountPreferenceTool.inputSchema.shape,
+  clearAccountPreferenceTool.handler
 );
 
 // Start the extension bridge (WebSocket server)

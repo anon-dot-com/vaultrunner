@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { onePasswordCLI } from "../onepassword/cli.js";
 import { logger } from "../utils/logger.js";
+import { accountPreferences } from "../preferences/account-preferences.js";
 
 export const listLoginsTool = {
   name: "list_logins",
   description:
-    "List saved logins for a website domain. Returns account names and usernames (no passwords).",
+    "List saved logins for a website domain. Returns account names and usernames (no passwords). Shows which account is set as the default (if any). IMPORTANT: If multiple accounts are found and no default is set, you MUST ask the user which account they want to use.",
   inputSchema: z.object({
     domain: z
       .string()
@@ -38,11 +39,31 @@ export const listLoginsTool = {
       };
     }
 
+    // Check for default preference
+    const defaultPref = accountPreferences.getDefaultForDomain(domain);
+
     logger.step(`Found ${logins.length} credential(s):`);
     for (const login of logins) {
+      const isDefault = defaultPref?.itemId === login.id;
       logger.credential(login.title, login.username, login.vault);
+      if (isDefault) {
+        logger.step(`  ^ Default account`);
+      }
     }
     logger.actionEnd(true, `${logins.length} login(s) available`);
+
+    // Build response with default info
+    const loginsWithDefault = logins.map((login) => ({
+      id: login.id,
+      title: login.title,
+      username: login.username,
+      vault: login.vault,
+      isDefault: defaultPref?.itemId === login.id,
+    }));
+
+    // Determine if user needs to choose
+    const hasDefault = loginsWithDefault.some(l => l.isDefault);
+    const needsUserChoice = logins.length > 1 && !hasDefault;
 
     return {
       content: [
@@ -52,12 +73,18 @@ export const listLoginsTool = {
             {
               found: true,
               domain,
-              logins: logins.map((login) => ({
-                id: login.id,
-                title: login.title,
-                username: login.username,
-                vault: login.vault,
-              })),
+              logins: loginsWithDefault,
+              defaultAccount: defaultPref ? {
+                itemId: defaultPref.itemId,
+                username: defaultPref.username,
+                title: defaultPref.title,
+              } : null,
+              needsUserChoice,
+              message: needsUserChoice
+                ? `Multiple accounts found for ${domain}. Please ask the user which account they want to use, then offer to save their choice as the default.`
+                : hasDefault
+                ? `Using default account: ${defaultPref!.username}`
+                : undefined,
             },
             null,
             2
