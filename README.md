@@ -2,8 +2,16 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/logo/vaultrunner-logo-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="assets/logo/vaultrunner-logo-light.svg">
-    <img alt="VaultRunner" src="assets/logo/vaultrunner-logo-dark.svg" width="280">
+    <img alt="Vaultrunner" src="assets/logo/vaultrunner-logo-dark.svg" width="280">
   </picture>
+  <br><br>
+  <a href="https://anon.com">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://cdn.prod.website-files.com/689bc3805f94765d37f8acd7/689e250badcbdc3397449e2e_Anon%20Official%20Logo%20-%20White.svg">
+      <source media="(prefers-color-scheme: light)" srcset="https://cdn.prod.website-files.com/689bc3805f94765d37f8acd7/689c252a7e6af0f5b331a1b1_Anon%20Brandmark%20-%20Black.svg">
+      <img alt="by Anon" src="https://cdn.prod.website-files.com/689bc3805f94765d37f8acd7/689e250badcbdc3397449e2e_Anon%20Official%20Logo%20-%20White.svg" height="24">
+    </picture>
+  </a>
 </p>
 
 <p align="center">
@@ -12,8 +20,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/danielgmason/vaultrunner/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License"></a>
-  <a href="https://github.com/danielgmason/vaultrunner/stargazers"><img src="https://img.shields.io/github/stars/danielgmason/vaultrunner?style=flat-square" alt="GitHub stars"></a>
+  <a href="https://github.com/anon-dot-com/vaultrunner/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License"></a>
+  <a href="https://github.com/anon-dot-com/vaultrunner/stargazers"><img src="https://img.shields.io/github/stars/anon-dot-com/vaultrunner?style=flat-square" alt="GitHub stars"></a>
 </p>
 
 <p align="center">
@@ -248,17 +256,17 @@ npx vaultrunner dashboard  # Open web dashboard
 ## Development
 
 ```bash
-git clone https://github.com/danielgmason/vaultrunner.git
+git clone https://github.com/anon-dot-com/vaultrunner.git
 cd vaultrunner && pnpm install && pnpm build
 ```
 
 ## License
 
-MIT © Daniel Mason
+MIT © [Anon](https://anon.com)
 
 ---
 
 <p align="center">
-  <strong>VaultRunner makes authenticated automation possible.</strong><br>
+  <strong>Vaultrunner makes authenticated automation possible.</strong><br>
   Claude handles the browser. 1Password handles the credentials. You stay in control.
 </p>
