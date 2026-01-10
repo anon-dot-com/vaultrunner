@@ -27,17 +27,16 @@
 
 ## The Problem
 
-Claude can automate your browser—**but only for sites where you're already logged in.**
+Claude browser automation works great—until a site asks you to log in.
 
-For anything requiring authentication, you're stuck:
+**New logins, session expirations, and MFA challenges break terminal-first workflows.** When auth is required, you have to leave your terminal, open the browser, enter credentials, handle 2FA codes, and manually complete the flow before automation can continue.
 
-- **Frequent re-logins**: Sites that expire sessions or require MFA on each visit
-- **Async automations**: Background tasks that run while you're away
-- **Multi-account workflows**: Switching between accounts requires manual auth
+This interrupts:
+- Async automations that run while you're away
+- Scripts that need to authenticate across multiple sites
+- Any workflow where sessions expire
 
-When auth is needed, you have to return to the browser, manually enter credentials, handle MFA codes, and babysit the automation. This defeats the purpose.
-
-**VaultRunner eliminates this friction.**
+**VaultRunner keeps you in the terminal.**
 
 ## The Solution
 
