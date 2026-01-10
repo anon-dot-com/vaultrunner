@@ -27,16 +27,17 @@
 
 ## The Problem
 
-Claude can automate browsers. But **it can't log in**.
+Claude can automate your browser—**but only for sites where you're already logged in.**
 
-By design, Claude won't handle passwords directly—they could leak into context windows, logs, or training data. This blocks entire categories of automation:
+For anything requiring authentication, you're stuck:
 
-- ❌ Can't check your bank balance
-- ❌ Can't post to social media
-- ❌ Can't manage cloud dashboards
-- ❌ Can't access any authenticated workflow
+- **Frequent re-logins**: Sites that expire sessions or require MFA on each visit
+- **Async automations**: Background tasks that run while you're away
+- **Multi-account workflows**: Switching between accounts requires manual auth
 
-**VaultRunner bridges this gap.**
+When auth is needed, you have to return to the browser, manually enter credentials, handle MFA codes, and babysit the automation. This defeats the purpose.
+
+**VaultRunner eliminates this friction.**
 
 ## The Solution
 
