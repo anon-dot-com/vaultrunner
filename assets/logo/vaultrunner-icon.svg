@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="lockGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a371f7"/>
+      <stop offset="100%" stop-color="#58a6ff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Speed lines (behind lock) -->
+  <rect x="4" y="28" width="14" height="4" rx="2" fill="#58a6ff" opacity="0.4"/>
+  <rect x="4" y="38" width="18" height="4" rx="2" fill="#58a6ff" opacity="0.6"/>
+  <rect x="4" y="48" width="12" height="4" rx="2" fill="#58a6ff" opacity="0.3"/>
+
+  <!-- Lock body -->
+  <rect x="22" y="32" width="32" height="26" rx="5" fill="url(#lockGradient)"/>
+
+  <!-- Lock shackle -->
+  <path d="M30 32V22C30 15.3726 35.3726 10 42 10V10C48.6274 10 54 15.3726 54 22V32"
+        stroke="url(#lockGradient)" stroke-width="5" stroke-linecap="round" fill="none"/>
+
+  <!-- Keyhole -->
+  <circle cx="38" cy="43" r="4" fill="#0d1117"/>
+  <rect x="36" y="46" width="4" height="7" rx="1.5" fill="#0d1117"/>
+</svg>

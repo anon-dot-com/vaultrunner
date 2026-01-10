@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 60" fill="none">
+  <defs>
+    <linearGradient id="lockGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a371f7"/>
+      <stop offset="100%" stop-color="#58a6ff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Lock Icon with Speed Lines -->
+  <g transform="translate(5, 8)">
+    <!-- Speed lines (behind lock) -->
+    <rect x="0" y="16" width="12" height="3" rx="1.5" fill="#58a6ff" opacity="0.4"/>
+    <rect x="0" y="24" width="16" height="3" rx="1.5" fill="#58a6ff" opacity="0.6"/>
+    <rect x="0" y="32" width="10" height="3" rx="1.5" fill="#58a6ff" opacity="0.3"/>
+
+    <!-- Lock body -->
+    <rect x="18" y="20" width="26" height="22" rx="4" fill="url(#lockGradient)"/>
+
+    <!-- Lock shackle -->
+    <path d="M24 20V14C24 9.58172 27.5817 6 32 6V6C36.4183 6 40 9.58172 40 14V20"
+          stroke="url(#lockGradient)" stroke-width="4" stroke-linecap="round" fill="none"/>
+
+    <!-- Keyhole -->
+    <circle cx="31" cy="29" r="3" fill="#0d1117"/>
+    <rect x="29.5" y="31" width="3" height="5" rx="1" fill="#0d1117"/>
+  </g>
+
+  <!-- VaultRunner Text -->
+  <text x="65" y="40" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        font-size="28" font-weight="600" fill="#f0f6fc">
+    Vault<tspan fill="url(#lockGradient)">Runner</tspan>
+  </text>
+</svg>

@@ -15,8 +15,12 @@
     "autofill",
     "security"
   ],
-  "author": "",
+  "author": "Daniel Mason",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danielgmason/vaultrunner.git"
+  },
   "engines": {
     "node": ">=18.0.0"
   }
