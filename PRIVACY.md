@@ -78,7 +78,7 @@ You can:
 ## Open Source
 
 VaultRunner is open source software. You can review the complete source code at:
-https://github.com/anthropics/vaultrunner
+https://github.com/danielgmason/vaultrunner
 
 ## Children's Privacy
 
