@@ -514,8 +514,15 @@
           <h2>Contact Us</h2>
           <p>Send us a message and we'll get back to you as soon as possible.</p>
 
-          <form class="contact-form" action="https://formspree.io/f/dm@team.anon.com" method="POST" id="contact-form">
+          <form class="contact-form" action="https://formsubmit.co/dm@team.anon.com" method="POST" id="contact-form">
             <div id="form-status" class="form-status"></div>
+
+            <!-- FormSubmit.co configuration -->
+            <input type="hidden" name="_subject" value="VaultRunner Support Request">
+            <input type="hidden" name="_captcha" value="false">
+            <input type="hidden" name="_template" value="table">
+            <input type="hidden" name="_next" value="https://vaultrunner.dev/support.html?submitted=true">
+            <input type="text" name="_honey" style="display:none">
 
             <div class="form-group">
               <label for="name">Name</label>
@@ -545,9 +552,6 @@
               <label for="message">Message</label>
               <textarea id="message" name="message" placeholder="Describe your issue or question..." required></textarea>
             </div>
-
-            <input type="hidden" name="_subject" value="VaultRunner Support Request">
-            <input type="text" name="_gotcha" style="display:none">
 
             <button type="submit" class="form-submit">Send Message</button>
 
@@ -689,41 +693,16 @@
   </footer>
 
   <script>
-    // Handle form submission
-    const form = document.getElementById('contact-form');
+    // Check if returning from successful form submission
+    const urlParams = new URLSearchParams(window.location.search);
     const status = document.getElementById('form-status');
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const submitBtn = form.querySelector('.form-submit');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Sending...';
-
-      try {
-        const response = await fetch(form.action, {
-          method: 'POST',
-          body: new FormData(form),
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-
-        if (response.ok) {
-          status.className = 'form-status success';
-          status.textContent = 'Thanks for your message! We\'ll get back to you soon.';
-          form.reset();
-        } else {
-          throw new Error('Form submission failed');
-        }
-      } catch (error) {
-        status.className = 'form-status error';
-        status.textContent = 'Something went wrong. Please try again or email us directly at dm@team.anon.com';
-      }
-
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Send Message';
-    });
+    if (urlParams.get('submitted') === 'true') {
+      status.className = 'form-status success';
+      status.textContent = 'Thanks for your message! We\'ll get back to you soon.';
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   </script>
 </body>
 </html>
