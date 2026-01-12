@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VaultRunner - Secure Auth for Claude Browser Automation</title>
+  <meta name="description" content="The missing auth layer for Claude browser automation. Secure logins, automatic MFA, zero credential exposure.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0D1117;
+      --bg-secondary: #161B22;
+      --bg-tertiary: #21262D;
+      --text-primary: #F0F6FC;
+      --text-secondary: #8B949E;
+      --text-muted: #6E7681;
+      --purple: #6D72C3;
+      --purple-light: #8B8FD4;
+      --blue: #2F81F7;
+      --blue-light: #58A6FF;
+      --accent: #D97757;
+      --border: #30363D;
+      --success: #3FB950;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    code, pre, .mono {
+      font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    }
+
+    a {
+      color: var(--blue-light);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    a:hover {
+      color: var(--blue);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Nav */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(13, 17, 23, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 18px;
+      color: var(--text-primary);
+    }
+
+    .nav-logo svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .nav-links a:hover {
+      color: var(--text-primary);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--purple);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--purple-light);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-secondary);
+      border-color: var(--text-muted);
+    }
+
+    /* Hero */
+    .hero {
+      padding: 160px 0 120px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+
+    .hero-badge .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--success);
+      border-radius: 50%;
+    }
+
+    .hero h1 {
+      font-size: 56px;
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      letter-spacing: -0.02em;
+    }
+
+    .hero h1 .gradient {
+      background: linear-gradient(135deg, var(--purple) 0%, var(--blue) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 20px;
+      color: var(--text-secondary);
+      max-width: 640px;
+      margin: 0 auto 40px;
+    }
+
+    .hero-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 64px;
+    }
+
+    .hero-code {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 32px;
+      display: inline-block;
+      text-align: left;
+    }
+
+    .hero-code code {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .hero-code .prompt {
+      color: var(--text-muted);
+    }
+
+    .hero-code .command {
+      color: var(--blue-light);
+    }
+
+    /* Problem Section */
+    .section {
+      padding: 100px 0;
+    }
+
+    .section-label {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--purple);
+      margin-bottom: 16px;
+    }
+
+    .section h2 {
+      font-size: 40px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      letter-spacing: -0.02em;
+    }
+
+    .section-lead {
+      font-size: 18px;
+      color: var(--text-secondary);
+      max-width: 720px;
+    }
+
+    /* Flow Diagram */
+    .flow {
+      margin-top: 64px;
+    }
+
+    .flow-diagram {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 48px;
+      overflow-x: auto;
+    }
+
+    .flow-steps {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      min-width: 800px;
+    }
+
+    .flow-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .flow-icon {
+      width: 64px;
+      height: 64px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .flow-icon svg {
+      width: 28px;
+      height: 28px;
+      color: var(--text-secondary);
+    }
+
+    .flow-icon.purple { border-color: var(--purple); }
+    .flow-icon.purple svg { color: var(--purple); }
+    .flow-icon.blue { border-color: var(--blue); }
+    .flow-icon.blue svg { color: var(--blue); }
+    .flow-icon.accent { border-color: var(--accent); }
+    .flow-icon.accent svg { color: var(--accent); }
+
+    .flow-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .flow-arrow {
+      color: var(--text-muted);
+      font-size: 24px;
+    }
+
+    .flow-note {
+      text-align: center;
+      margin-top: 32px;
+      padding: 16px 24px;
+      background: rgba(109, 114, 195, 0.1);
+      border: 1px solid rgba(109, 114, 195, 0.2);
+      border-radius: 8px;
+      display: inline-block;
+    }
+
+    .flow-note code {
+      color: var(--purple-light);
+      font-size: 14px;
+    }
+
+    /* Features Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 64px;
+    }
+
+    @media (max-width: 900px) {
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .feature-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+    }
+
+    .feature-card:hover {
+      border-color: var(--text-muted);
+    }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--bg-tertiary);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .feature-icon svg {
+      width: 20px;
+      height: 20px;
+      color: var(--purple);
+    }
+
+    .feature-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Code Block */
+    .code-section {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      margin-top: 64px;
+      overflow: hidden;
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .code-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--bg-tertiary);
+    }
+
+    .code-dot.red { background: #FF5F56; }
+    .code-dot.yellow { background: #FFBD2E; }
+    .code-dot.green { background: #27C93F; }
+
+    .code-title {
+      margin-left: 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .code-block {
+      padding: 24px;
+      overflow-x: auto;
+    }
+
+    .code-block pre {
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .code-block .comment { color: var(--text-muted); }
+    .code-block .string { color: var(--success); }
+    .code-block .key { color: var(--purple-light); }
+    .code-block .prompt { color: var(--text-muted); }
+    .code-block .user { color: var(--blue-light); }
+    .code-block .response { color: var(--text-secondary); }
+
+    /* Install Section */
+    .install-steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-top: 64px;
+    }
+
+    @media (max-width: 800px) {
+      .install-steps {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .install-step {
+      position: relative;
+    }
+
+    .install-number {
+      width: 32px;
+      height: 32px;
+      background: var(--purple);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .install-step h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .install-step p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .install-step code {
+      display: block;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--blue-light);
+    }
+
+    /* Security Section */
+    .security-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-top: 64px;
+    }
+
+    @media (max-width: 700px) {
+      .security-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .security-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      gap: 16px;
+    }
+
+    .security-check {
+      width: 24px;
+      height: 24px;
+      background: rgba(63, 185, 80, 0.15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .security-check svg {
+      width: 14px;
+      height: 14px;
+      color: var(--success);
+    }
+
+    .security-card h4 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .security-card p {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 48px 0;
+      margin-top: 100px;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .footer-brand span {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .footer-links a:hover {
+      color: var(--text-primary);
+    }
+
+    /* Anthropic Badge */
+    .anthropic-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(217, 119, 87, 0.1);
+      border: 1px solid rgba(217, 119, 87, 0.2);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--accent);
+      margin-top: 24px;
+    }
+
+    .anthropic-badge svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    @media (max-width: 600px) {
+      .hero h1 {
+        font-size: 36px;
+      }
+
+      .hero p {
+        font-size: 16px;
+      }
+
+      .section h2 {
+        font-size: 28px;
+      }
+
+      .hero-buttons {
+        flex-direction: column;
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      .footer-inner {
+        flex-direction: column;
+        gap: 24px;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="container nav-inner">
+      <a href="/" class="nav-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        VaultRunner
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#install">Install</a>
+        <a href="#security">Security</a>
+        <a href="https://github.com/anon-dot-com/vaultrunner" target="_blank">GitHub</a>
+        <a href="https://chromewebstore.google.com/detail/vaultrunner" class="btn btn-primary">Get Extension</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <div class="hero-badge">
+          <span class="dot"></span>
+          Works with Claude Code
+        </div>
+        <h1>
+          The missing <span class="gradient">auth layer</span><br>
+          for Claude browser automation
+        </h1>
+        <p>
+          Secure logins. Automatic MFA. Zero credential exposure.<br>
+          Your passwords flow from 1Password to the browser—Claude never sees them.
+        </p>
+        <div class="hero-buttons">
+          <a href="https://chromewebstore.google.com/detail/vaultrunner" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Install Extension
+          </a>
+          <a href="https://github.com/anon-dot-com/vaultrunner" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            View on GitHub
+          </a>
+        </div>
+        <div class="hero-code">
+          <code>
+            <span class="prompt">$</span> <span class="command">npx vaultrunner setup</span>
+          </code>
+        </div>
+        <div class="anthropic-badge">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.304 3.541l-5.296 16.918h-3.208l5.296-16.918h3.208zm-6.608 0l-5.296 16.918h3.208l5.296-16.918h-3.208z"/>
+          </svg>
+          Built for the Claude ecosystem
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="problem">
+      <div class="container">
+        <span class="section-label">The Problem</span>
+        <h2>Auth breaks your terminal workflow</h2>
+        <p class="section-lead">
+          Claude browser automation works great—until a site asks you to log in.
+          Session expirations, MFA challenges, and multi-step logins force you out of the terminal and into the browser.
+        </p>
+
+        <div class="flow">
+          <div class="flow-diagram">
+            <div class="flow-steps">
+              <div class="flow-step">
+                <div class="flow-icon accent">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                  </svg>
+                </div>
+                <span class="flow-label">Claude Code</span>
+              </div>
+              <span class="flow-arrow">→</span>
+              <div class="flow-step">
+                <div class="flow-icon purple">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                </div>
+                <span class="flow-label">VaultRunner</span>
+              </div>
+              <span class="flow-arrow">→</span>
+              <div class="flow-step">
+                <div class="flow-icon blue">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                </div>
+                <span class="flow-label">1Password</span>
+              </div>
+              <span class="flow-arrow">→</span>
+              <div class="flow-step">
+                <div class="flow-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <circle cx="12" cy="12" r="4"/>
+                    <line x1="21.17" y1="8" x2="12" y2="8"/>
+                    <line x1="3.95" y1="6.06" x2="8.54" y2="14"/>
+                    <line x1="10.88" y1="21.94" x2="15.46" y2="14"/>
+                  </svg>
+                </div>
+                <span class="flow-label">Browser</span>
+              </div>
+            </div>
+          </div>
+          <div style="text-align: center;">
+            <div class="flow-note">
+              <code>Credentials bypass Claude entirely. You get: { success: true }</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="features">
+      <div class="container">
+        <span class="section-label">Features</span>
+        <h2>Everything you need for authenticated automation</h2>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <h3>1Password Integration</h3>
+            <p>Credentials flow directly from your vault to the browser. Claude only receives success/failure—never your passwords.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+            </div>
+            <h3>Automatic MFA</h3>
+            <p>Reads TOTP codes from 1Password, SMS from Messages, and verification emails from Gmail. Handles 2FA automatically.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+            </div>
+            <h3>Learning System</h3>
+            <p>Improves login reliability over time. Learns site-specific patterns and remembers your preferred accounts per domain.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                <line x1="8" y1="21" x2="16" y2="21"/>
+                <line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
+            </div>
+            <h3>Multi-Step Flows</h3>
+            <p>Handles username → password → 2FA sequences. Works with sites that split login across multiple pages.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+            </div>
+            <h3>Open Source</h3>
+            <p>Fully auditable code. No hidden credential handling. Trust but verify—every line is on GitHub.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="2" y1="12" x2="22" y2="12"/>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
+            </div>
+            <h3>Fully Local</h3>
+            <p>No servers. No cloud. Everything runs on your machine. Your credentials never leave your device.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="install">
+      <div class="container">
+        <span class="section-label">Quick Start</span>
+        <h2>Get running in 3 steps</h2>
+
+        <div class="install-steps">
+          <div class="install-step">
+            <div class="install-number">1</div>
+            <h3>Install Extension</h3>
+            <p>Add VaultRunner to Chrome from the Web Store.</p>
+            <a href="https://chromewebstore.google.com/detail/vaultrunner" class="btn btn-secondary" style="margin-top: 8px;">Chrome Web Store</a>
+          </div>
+
+          <div class="install-step">
+            <div class="install-number">2</div>
+            <h3>Run Setup</h3>
+            <p>Configure 1Password CLI integration.</p>
+            <code>npx vaultrunner setup</code>
+          </div>
+
+          <div class="install-step">
+            <div class="install-number">3</div>
+            <h3>Add to Claude Code</h3>
+            <p>Add VaultRunner to your MCP config.</p>
+            <code>~/.claude/claude_desktop_config.json</code>
+          </div>
+        </div>
+
+        <div class="code-section">
+          <div class="code-header">
+            <span class="code-dot red"></span>
+            <span class="code-dot yellow"></span>
+            <span class="code-dot green"></span>
+            <span class="code-title">claude_desktop_config.json</span>
+          </div>
+          <div class="code-block">
+<pre>{
+  <span class="key">"mcpServers"</span>: {
+    <span class="key">"vaultrunner"</span>: {
+      <span class="key">"command"</span>: <span class="string">"npx"</span>,
+      <span class="key">"args"</span>: [<span class="string">"vaultrunner-mcp"</span>]
+    }
+  }
+}</pre>
+          </div>
+        </div>
+
+        <div class="code-section" style="margin-top: 32px;">
+          <div class="code-header">
+            <span class="code-dot red"></span>
+            <span class="code-dot yellow"></span>
+            <span class="code-dot green"></span>
+            <span class="code-title">Terminal</span>
+          </div>
+          <div class="code-block">
+<pre><span class="prompt">You:</span> <span class="user">Log into my AWS console and check EC2 instances</span>
+
+<span class="prompt">Claude:</span> <span class="response">I'll log you into AWS.</span>
+        <span class="comment">[VaultRunner fills credentials + handles MFA]</span>
+
+        <span class="response">You're now logged in. I can see 3 running EC2 instances...</span></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="security">
+      <div class="container">
+        <span class="section-label">Security</span>
+        <h2>Built with security first</h2>
+        <p class="section-lead">
+          VaultRunner was designed so that Claude never handles your credentials directly.
+          Everything flows through secure, local channels.
+        </p>
+
+        <div class="security-grid">
+          <div class="security-card">
+            <div class="security-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div>
+              <h4>Credentials bypass Claude</h4>
+              <p>1Password → Extension → DOM. Claude only receives success/failure confirmation.</p>
+            </div>
+          </div>
+
+          <div class="security-card">
+            <div class="security-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div>
+              <h4>Compliant with Claude's policies</h4>
+              <p>Claude doesn't handle passwords. VaultRunner does, locally and securely.</p>
+            </div>
+          </div>
+
+          <div class="security-card">
+            <div class="security-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div>
+              <h4>Your vault, your control</h4>
+              <p>Requires 1Password biometric auth. Nothing stored externally.</p>
+            </div>
+          </div>
+
+          <div class="security-card">
+            <div class="security-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div>
+              <h4>Fully local processing</h4>
+              <p>No servers. No cloud. Everything runs on your machine.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="code-section" style="margin-top: 48px;">
+          <div class="code-header">
+            <span class="code-dot red"></span>
+            <span class="code-dot yellow"></span>
+            <span class="code-dot green"></span>
+            <span class="code-title">What Claude sees</span>
+          </div>
+          <div class="code-block">
+<pre><span class="comment">// Claude's view of a login:</span>
+{
+  <span class="key">"action"</span>: <span class="string">"fill_credentials"</span>,
+  <span class="key">"result"</span>: {
+    <span class="key">"success"</span>: <span class="string">true</span>,
+    <span class="key">"filledFields"</span>: [<span class="string">"username"</span>, <span class="string">"password"</span>]
+  }
+}
+
+<span class="comment">// What Claude does NOT see:</span>
+<span class="comment">// - Your actual password</span>
+<span class="comment">// - Your TOTP secrets</span>
+<span class="comment">// - Your email verification codes</span></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <span>MIT License · <a href="https://anon.com">Anonymity Labs, Inc.</a></span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/anon-dot-com/vaultrunner">GitHub</a>
+        <a href="https://github.com/anon-dot-com/vaultrunner/blob/main/PRIVACY.md">Privacy</a>
+        <a href="https://github.com/anon-dot-com/vaultrunner/issues">Issues</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
