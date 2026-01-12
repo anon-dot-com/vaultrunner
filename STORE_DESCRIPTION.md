@@ -1,154 +1,102 @@
 # Chrome Web Store - Detailed Description
 
-**Character count: ~4,800 (well under 10,000 limit)**
-
 ---
 
-## The Problem
+VaultRunner lets Claude Code log into websites for you—securely, automatically, and without exposing your passwords to AI.
 
-Claude browser automation is powerful—until a site asks you to log in.
+When Claude needs to authenticate, VaultRunner pulls credentials directly from your 1Password vault and fills them into the browser. Claude never sees your actual password. It just knows the login worked.
 
-When you're working in the terminal with Claude Code, authentication breaks your flow. Session expirations, MFA challenges, and multi-step login forms force you to leave your terminal, open the browser, manually enter credentials, handle 2FA codes, and complete the flow before automation can continue.
+## What You Can Do
 
-This interrupts:
-• Async automations that run while you're away
-• Scripts that need to authenticate across multiple sites
-• Any workflow where sessions expire unexpectedly
+Tell Claude to "log into AWS and check my EC2 instances" or "post this to my Twitter account"—and it just works. VaultRunner handles the authentication seamlessly:
 
-VaultRunner solves this by connecting Claude to your 1Password vault, enabling secure authenticated automation without ever exposing your credentials to AI.
+• Log into cloud consoles (AWS, GCP, Azure)
+• Access SaaS tools (Salesforce, HubSpot, Zendesk)
+• Manage social accounts (Twitter/X, LinkedIn)
+• Check financial dashboards and statements
+• Automate any workflow that requires a login
+
+No more copy-pasting passwords. No more switching to the browser to complete a login. No more interrupted automations when sessions expire.
+
+## Automatic MFA
+
+VaultRunner handles two-factor authentication automatically:
+
+• Reads TOTP codes from 1Password
+• Retrieves SMS codes from macOS Messages
+• Pulls verification codes from Gmail
+
+When a site texts you a code, VaultRunner grabs it and enters it—without you lifting a finger.
+
+## Multi-Step Logins
+
+Many sites split login across multiple pages. VaultRunner navigates through them automatically—entering your username, clicking Next, filling your password, handling 2FA—completing the entire flow so Claude can continue working.
+
+## Your Credentials Stay Private
+
+This is the key part: **your passwords never touch Claude.**
+
+The credential flow is completely local:
+1Password → VaultRunner → Browser
+
+Claude only receives confirmation: "Login successful, filled username and password." That's it. Your actual credentials bypass the AI entirely.
 
 ## How It Works
 
-VaultRunner acts as a secure bridge between Claude Code and 1Password:
+1. Claude asks VaultRunner to log into a site
+2. VaultRunner queries 1Password for matching accounts (returns usernames only)
+3. You approve which account to use
+4. Credentials flow directly from 1Password to the browser form
+5. Claude sees: { success: true }
 
-1. Claude requests a login → calls VaultRunner
-2. VaultRunner queries 1Password → returns account list (usernames only, never passwords)
-3. Claude selects an account → VaultRunner fills credentials directly into the browser
-4. Claude receives confirmation → { success: true }
+Everything runs locally on your machine. No servers, no cloud, no external services that could be compromised.
 
-The key insight: **Claude never sees your password.** Credentials flow directly from 1Password to the browser's form fields. Claude only knows the operation succeeded.
+## Built on 1Password
 
-## Core Features
+VaultRunner uses the official 1Password CLI for vault access. Your existing 1Password setup works out of the box—same biometric authentication, same security model, same vault you already trust.
 
-**1Password Integration**
-Credentials flow directly from your vault to the browser. VaultRunner uses the official 1Password CLI for secure vault access. Your passwords are never logged, cached, or exposed to Claude.
+## Gets Smarter Over Time
 
-**Automatic MFA Handling**
-VaultRunner handles multi-factor authentication automatically:
-• TOTP codes from 1Password authenticator
-• SMS codes from macOS Messages
-• Verification codes from Gmail
+VaultRunner learns from every login. It remembers which account you prefer for each site, stores successful login patterns, and improves reliability automatically. The more you use it, the better it works.
 
-When a site sends you a 2FA code, VaultRunner retrieves it and fills it in—all without manual intervention.
+## Fully Open Source
 
-**Multi-Step Login Flows**
-Many sites split login across multiple pages (username → password → 2FA). VaultRunner handles these sequences automatically, clicking through each step and filling the appropriate fields.
+Every line of code is on GitHub. Audit exactly how credentials are handled. We built VaultRunner for security-conscious developers who want to verify, not just trust.
 
-**Smart Learning System**
-VaultRunner learns from every login attempt. It remembers site-specific patterns, your preferred accounts per domain, and improves reliability over time. After successful logins, it stores the working pattern for faster future attempts.
+## Quick Setup
 
-**Account Preferences**
-When you have multiple accounts for a site (personal and work GitHub, for example), VaultRunner remembers which one you prefer to use by default.
-
-## Security Model
-
-VaultRunner was designed with security as the foundation:
-
-**Credentials Bypass Claude Entirely**
-The flow is: 1Password → VaultRunner Extension → Browser DOM. Claude's API never receives your actual passwords. It only gets success/failure confirmation and a list of which fields were filled.
-
-**Compliant with Claude's Security Policies**
-Since Claude doesn't handle passwords directly, VaultRunner works within Claude's security guidelines. The AI assistant orchestrates the login, but the sensitive credential handling happens locally through VaultRunner.
-
-**Your Vault, Your Control**
-VaultRunner requires 1Password biometric authentication to access your vault. Nothing is stored externally. You maintain complete control over which credentials are used and when.
-
-**Fully Local Processing**
-There are no servers. No cloud services. Everything runs on your machine. Your credentials never leave your device, and there's no external service that could be compromised.
-
-**Open Source**
-Every line of code is available on GitHub for inspection. You can audit exactly how credentials are handled. Trust but verify—we encourage security researchers to review our implementation.
-
-## What Claude Sees vs. What It Doesn't
-
-When a login happens, Claude receives:
-```
-{
-  "action": "fill_credentials",
-  "result": {
-    "success": true,
-    "filledFields": ["username", "password"]
-  }
-}
-```
-
-What Claude does NOT see:
-• Your actual password
-• Your TOTP secrets
-• Your SMS verification codes
-• Your email verification codes
-• Any sensitive credential data
-
-## Use Cases
-
-VaultRunner enables authenticated automation for:
-
-**DevOps & Cloud**
-Log into AWS, GCP, Azure, and other cloud consoles. Check resources, manage deployments, and monitor services—all from your terminal.
-
-**Social Media Management**
-Post to Twitter/X, LinkedIn, and other platforms. Manage multiple accounts without switching contexts.
-
-**Financial Services**
-Access banking dashboards, check balances, download statements. Handle the authentication that previously required manual intervention.
-
-**SaaS Administration**
-Manage Salesforce, HubSpot, Zendesk, and other business tools. Automate repetitive admin tasks that require authentication.
-
-**E-commerce**
-Access Shopify, Amazon Seller Central, and other merchant platforms. Automate inventory checks, order management, and reporting.
-
-**Any Authenticated Workflow**
-If it requires a login and you want Claude to handle it, VaultRunner makes it possible.
+1. Install this extension
+2. Run `npx vaultrunner setup`
+3. Add VaultRunner to your Claude Code config
+4. Start automating
 
 ## Requirements
 
-• 1Password account with CLI access enabled
-• 1Password CLI installed (brew install --cask 1password-cli on Mac)
-• Claude Code with browser automation capabilities
-• Node.js 18 or higher
+• 1Password with CLI access
+• Chrome browser
+• Claude Code with browser automation
+• Node.js 18+
 
-**Optional (for enhanced 2FA support):**
-• macOS Messages app (for SMS code reading—requires Full Disk Access permission)
-• Gmail account (for email verification code reading—requires OAuth setup)
+Optional for enhanced 2FA:
+• macOS Messages (for SMS codes)
+• Gmail (for email verification codes)
 
-## Quick Start
-
-1. Install this extension from the Chrome Web Store
-2. Run `npx vaultrunner setup` to configure 1Password integration
-3. Add VaultRunner to your Claude Code MCP configuration
-4. Start automating: "Log into my AWS console and check EC2 instances"
-
-## Privacy & Data
+## Privacy First
 
 • No analytics or tracking
 • No data collection
-• All processing happens locally on your device
+• All processing happens locally
 • Passwords are never logged or cached
-• Open source for complete transparency
+• Open source for full transparency
 
-## Support
+## Get Help
 
-• Documentation: github.com/anon-dot-com/vaultrunner
+• Docs: github.com/anon-dot-com/vaultrunner
 • Issues: github.com/anon-dot-com/vaultrunner/issues
-• Discussions: github.com/anon-dot-com/vaultrunner/discussions
-
-## About
-
-VaultRunner is built by Anonymity Labs (anon.com) and is released under the MIT license. We believe authenticated automation should be secure by design, not an afterthought.
+• Support: vaultrunner.dev/support
 
 ---
 
-**VaultRunner: The missing auth layer for Claude browser automation.**
+VaultRunner is built by Anonymity Labs and released under the MIT license.
 
 Claude handles the browser. 1Password handles the credentials. You stay in control.
