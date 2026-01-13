@@ -78,7 +78,7 @@ VaultRunner connects Claude to 1Password, enabling secure authenticated automati
 
 ## Quick Start
 
-### 1. Install VaultRunner
+### 1. Clone and Build VaultRunner
 
 ```bash
 git clone https://github.com/anon-dot-com/vaultrunner.git
@@ -89,14 +89,13 @@ pnpm install && pnpm build
 ### 2. Run Setup
 
 ```bash
-npx vaultrunner setup
+node packages/mcp-server/dist/cli/index.js setup
 ```
 
 This will:
 - Install/verify 1Password CLI
 - Check for 1Password Desktop App (recommended for biometric unlock)
 - Guide you to install the Chrome extension
-- **Auto-configure Claude Code MCP** (writes to `~/.claude.json`)
 
 ### 3. Load Chrome Extension
 
@@ -104,11 +103,29 @@ This will:
 2. Enable **Developer mode** (toggle in top right)
 3. Click **Load unpacked** and select `packages/chrome-extension/dist`
 
-### 4. Restart Claude Code
+### 4. Add VaultRunner MCP to Claude Code
 
-After setup completes, restart Claude Code to load the VaultRunner MCP. You can verify it's working by asking Claude to check the vault status.
+Run this command from the vaultrunner directory:
 
-### 5. Connect and Automate
+```bash
+claude mcp add vaultrunner -s user -- node $(pwd)/packages/mcp-server/dist/index.js
+```
+
+Or use the interactive `/mcp` command in Claude Code:
+```
+/mcp
+```
+
+Then select "Add MCP Server" and configure it with:
+- **Name**: `vaultrunner`
+- **Command**: `node`
+- **Args**: `/full/path/to/vaultrunner/packages/mcp-server/dist/index.js`
+
+### 5. Restart Claude Code
+
+Restart Claude Code to load the VaultRunner MCP. You can verify it's working by asking Claude to check the vault status.
+
+### 6. Connect and Automate
 
 **Important:** The browser extension must be connected for logins to work. This requires:
 - Chrome open
@@ -253,35 +270,40 @@ Use `get_vault_status` in Claude Code to check both requirements.
 
 ### Optional (for 2FA)
 
-- **macOS Messages** — For SMS code reading (requires Full Disk Access, run `npx vaultrunner setup-messages`)
-- **Gmail** — For email code reading (requires Google OAuth, run `npx vaultrunner setup-gmail`)
+- **macOS Messages** — For SMS code reading (requires Full Disk Access, run `vaultrunner setup-messages`)
+- **Gmail** — For email code reading (requires Google OAuth, run `vaultrunner setup-gmail`)
 
 ## CLI Commands
+
+All commands should be run from the vaultrunner directory. You can create an alias for convenience:
+
+```bash
+alias vaultrunner="node $(pwd)/packages/mcp-server/dist/cli/index.js"
+```
 
 ### Setup & Status
 
 ```bash
-npx vaultrunner setup           # Full setup wizard (1Password CLI, Chrome extension, Claude Code MCP)
-npx vaultrunner status          # Check system status and connections
-npx vaultrunner config          # Show manual Claude Code MCP configuration
+vaultrunner setup           # Full setup wizard (1Password CLI, Chrome extension)
+vaultrunner status          # Check system status and connections
 ```
 
 ### 2FA Configuration
 
 ```bash
-npx vaultrunner setup-messages  # Configure SMS/iMessage reading (macOS, requires Full Disk Access)
-npx vaultrunner setup-gmail     # Connect Gmail for email 2FA codes (requires Google OAuth)
-npx vaultrunner disconnect-gmail # Remove Gmail connection
-npx vaultrunner test-2fa        # Test 2FA code reading from all sources
+vaultrunner setup-messages  # Configure SMS/iMessage reading (macOS, requires Full Disk Access)
+vaultrunner setup-gmail     # Connect Gmail for email 2FA codes (requires Google OAuth)
+vaultrunner disconnect-gmail # Remove Gmail connection
+vaultrunner test-2fa        # Test 2FA code reading from all sources
 ```
 
 ### Learning & Stats
 
 ```bash
-npx vaultrunner stats           # View login statistics and learned patterns
-npx vaultrunner contribute-rules # Share learned patterns with the community
-npx vaultrunner clear-history   # Clear login history (keeps learned rules)
-npx vaultrunner dashboard       # Open web dashboard
+vaultrunner stats           # View login statistics and learned patterns
+vaultrunner contribute-rules # Share learned patterns with the community
+vaultrunner clear-history   # Clear login history (keeps learned rules)
+vaultrunner dashboard       # Open web dashboard
 ```
 
 ## Use Cases
@@ -311,15 +333,18 @@ The browser extension must be active for logins to work:
 
 ### MCP not loading in Claude Code
 
-1. Run `npx vaultrunner setup` to auto-configure
-2. Restart Claude Code after setup
-3. Check `~/.claude.json` contains the vaultrunner MCP config
-4. Run `npx vaultrunner config` to see manual configuration if needed
+1. Make sure you've added the MCP using:
+   ```bash
+   claude mcp add vaultrunner -s user -- node /path/to/vaultrunner/packages/mcp-server/dist/index.js
+   ```
+2. Restart Claude Code after adding the MCP
+3. Run `claude mcp list` to verify vaultrunner is configured
+4. Check server status with `/mcp` in Claude Code
 
 ### 2FA codes not found
 
-- **SMS**: Run `npx vaultrunner setup-messages` and grant Full Disk Access
-- **Gmail**: Run `npx vaultrunner setup-gmail` to connect your account
+- **SMS**: Run `vaultrunner setup-messages` and grant Full Disk Access
+- **Gmail**: Run `vaultrunner setup-gmail` to connect your account
 - **TOTP**: Ensure the 1Password item has a one-time password configured
 
 ## Development

@@ -5,7 +5,7 @@
  */
 
 import { Command } from "commander";
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { homedir, platform } from "os";
 import { execSync } from "child_process";
@@ -50,9 +50,6 @@ ${colors.reset}${colors.dim}  Secure credential automation for AI agents${colors
 // Extension Web Store URL (update after publishing)
 const EXTENSION_WEBSTORE_URL = "https://chromewebstore.google.com/detail/vaultrunner/EXTENSION_ID_HERE";
 
-// Claude Code config path
-const CLAUDE_CONFIG_PATH = join(homedir(), ".claude.json");
-
 /**
  * Find the repo root by looking for package.json with name "vaultrunner"
  */
@@ -73,59 +70,6 @@ function findRepoRoot(): string | null {
     dir = join(dir, "..");
   }
   return null;
-}
-
-/**
- * Configure Claude Code MCP settings
- */
-function configureClaudeCode(): { success: boolean; alreadyConfigured: boolean; error?: string; usedLocalPath?: boolean } {
-  try {
-    let config: Record<string, unknown> = {};
-
-    // Read existing config if it exists
-    if (existsSync(CLAUDE_CONFIG_PATH)) {
-      const content = readFileSync(CLAUDE_CONFIG_PATH, "utf-8");
-      config = JSON.parse(content);
-    }
-
-    // Check if mcpServers exists
-    if (!config.mcpServers) {
-      config.mcpServers = {};
-    }
-
-    const mcpServers = config.mcpServers as Record<string, unknown>;
-
-    // Check if vaultrunner is already configured
-    if (mcpServers.vaultrunner) {
-      return { success: true, alreadyConfigured: true };
-    }
-
-    // Check if we're inside the vaultrunner repo with a built dist
-    const repoRoot = findRepoRoot();
-    const localMcpPath = repoRoot ? join(repoRoot, "packages/mcp-server/dist/index.js") : null;
-    const useLocalPath = localMcpPath && existsSync(localMcpPath);
-
-    // Add vaultrunner config - use local path if available, otherwise npx
-    if (useLocalPath && localMcpPath) {
-      mcpServers.vaultrunner = {
-        command: "node",
-        args: [localMcpPath]
-      };
-    } else {
-      mcpServers.vaultrunner = {
-        command: "npx",
-        args: ["vaultrunner-mcp"]
-      };
-    }
-
-    // Write back
-    writeFileSync(CLAUDE_CONFIG_PATH, JSON.stringify(config, null, 2));
-
-    return { success: true, alreadyConfigured: false, usedLocalPath: !!useLocalPath };
-  } catch (err) {
-    const error = err instanceof Error ? err.message : "Unknown error";
-    return { success: false, alreadyConfigured: false, error };
-  }
 }
 
 /**
@@ -245,26 +189,6 @@ program
     console.log(`   ${colors.cyan}https://chromewebstore.google.com/detail/claude/fcoeoabgfenejglbffodgkkbkcdhcgfn${colors.reset}`);
     console.log("");
 
-    // Configure Claude Code MCP
-    console.log(`${colors.bold}5. Claude Code MCP Configuration${colors.reset}`);
-    const claudeConfig = configureClaudeCode();
-    if (claudeConfig.success) {
-      if (claudeConfig.alreadyConfigured) {
-        console.log(`   ${colors.green}✓${colors.reset} Already configured in ${colors.dim}~/.claude.json${colors.reset}`);
-      } else {
-        console.log(`   ${colors.green}✓${colors.reset} Added to ${colors.dim}~/.claude.json${colors.reset}`);
-        if (claudeConfig.usedLocalPath) {
-          console.log(`   ${colors.dim}Using local build from this repo${colors.reset}`);
-        }
-        console.log(`   ${colors.yellow}⚠${colors.reset} Restart Claude Code to load VaultRunner`);
-      }
-    } else {
-      console.log(`   ${colors.red}✗${colors.reset} Could not configure: ${claudeConfig.error}`);
-      console.log(`   ${colors.dim}Run 'vaultrunner config' to see manual configuration${colors.reset}`);
-      allGood = false;
-    }
-    console.log("");
-
     // Summary
     console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
     if (allGood) {
@@ -273,7 +197,19 @@ program
       console.log(`${colors.bold}Next steps:${colors.reset}`);
       console.log(`   1. Install the VaultRunner Chrome extension`);
       console.log(`   2. Install the Claude Chrome extension if you haven't`);
-      console.log(`   3. Restart Claude Code to load VaultRunner MCP`);
+      console.log(`   3. Add VaultRunner MCP to Claude Code (see below)`);
+      console.log("");
+
+      // Show MCP configuration instructions
+      const repoRoot = findRepoRoot() || process.cwd();
+      const mcpPath = join(repoRoot, "packages/mcp-server/dist/index.js");
+      console.log(`${colors.bold}Add VaultRunner MCP to Claude Code:${colors.reset}`);
+      console.log("");
+      console.log(`   ${colors.cyan}claude mcp add vaultrunner -s user -- node ${mcpPath}${colors.reset}`);
+      console.log("");
+      console.log(`   Or use ${colors.cyan}/mcp${colors.reset} in Claude Code and add manually.`);
+      console.log("");
+      console.log(`   4. Restart Claude Code to load VaultRunner MCP`);
     } else {
       console.log(`${colors.yellow}${colors.bold}! Some requirements need attention${colors.reset}`);
       console.log(`   Please install the missing components above.`);
@@ -340,36 +276,37 @@ program
 
 program
   .command("config")
-  .description("Show Claude Code MCP configuration")
+  .description("Show how to add VaultRunner MCP to Claude Code")
   .action(() => {
     console.log("");
-    console.log(`${colors.cyan}${colors.bold}Claude Code MCP Configuration${colors.reset}`);
+    console.log(`${colors.cyan}${colors.bold}Add VaultRunner MCP to Claude Code${colors.reset}`);
     console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
     console.log("");
-    console.log(`Add this to your Claude Code MCP settings:`);
+
+    const repoRoot = findRepoRoot() || process.cwd();
+    const mcpPath = join(repoRoot, "packages/mcp-server/dist/index.js");
+
+    console.log(`${colors.bold}Option 1: Use the claude CLI (recommended)${colors.reset}`);
     console.log("");
-    console.log(`${colors.dim}┌──────────────────────────────────────────────────┐${colors.reset}`);
-    console.log(`${colors.cyan}{`);
-    console.log(`  "mcpServers": {`);
-    console.log(`    "vaultrunner": {`);
-    console.log(`      "command": "npx",`);
-    console.log(`      "args": ["vaultrunner-mcp"]`);
-    console.log(`    }`);
-    console.log(`  }`);
-    console.log(`}${colors.reset}`);
-    console.log(`${colors.dim}└──────────────────────────────────────────────────┘${colors.reset}`);
+    console.log(`   Run this command:`);
     console.log("");
-    console.log(`${colors.dim}Or if installed globally:${colors.reset}`);
+    console.log(`   ${colors.cyan}claude mcp add vaultrunner -s user -- node ${mcpPath}${colors.reset}`);
     console.log("");
-    console.log(`${colors.dim}┌──────────────────────────────────────────────────┐${colors.reset}`);
-    console.log(`${colors.cyan}{`);
-    console.log(`  "mcpServers": {`);
-    console.log(`    "vaultrunner": {`);
-    console.log(`      "command": "vaultrunner-mcp"`);
-    console.log(`    }`);
-    console.log(`  }`);
-    console.log(`}${colors.reset}`);
-    console.log(`${colors.dim}└──────────────────────────────────────────────────┘${colors.reset}`);
+    console.log(`   Then restart Claude Code.`);
+    console.log("");
+    console.log(`${colors.bold}Option 2: Use /mcp in Claude Code${colors.reset}`);
+    console.log("");
+    console.log(`   1. Type ${colors.cyan}/mcp${colors.reset} in Claude Code`);
+    console.log(`   2. Select "Add MCP Server"`);
+    console.log(`   3. Configure with:`);
+    console.log(`      - Name: ${colors.cyan}vaultrunner${colors.reset}`);
+    console.log(`      - Command: ${colors.cyan}node${colors.reset}`);
+    console.log(`      - Args: ${colors.cyan}${mcpPath}${colors.reset}`);
+    console.log("");
+    console.log(`${colors.bold}Verify it's working:${colors.reset}`);
+    console.log("");
+    console.log(`   ${colors.cyan}claude mcp list${colors.reset}        # Should show vaultrunner`);
+    console.log(`   ${colors.cyan}/mcp${colors.reset}                   # Check status in Claude Code`);
     console.log("");
   });
 
