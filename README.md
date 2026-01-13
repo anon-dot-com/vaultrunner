@@ -78,7 +78,7 @@ VaultRunner connects Claude to 1Password, enabling secure authenticated automati
 
 ## Quick Start
 
-### 1. Install Chrome Extension
+### 1. Install VaultRunner
 
 ```bash
 git clone https://github.com/anon-dot-com/vaultrunner.git
@@ -86,33 +86,36 @@ cd vaultrunner
 pnpm install && pnpm build
 ```
 
-Then load in Chrome:
-1. Go to `chrome://extensions`
-2. Enable **Developer mode** (toggle in top right)
-3. Click **Load unpacked** and select `packages/chrome-extension/dist`
-
-### 2. Configure MCP Server
+### 2. Run Setup
 
 ```bash
 npx vaultrunner setup
 ```
 
-This configures 1Password CLI integration and verifies your setup.
+This will:
+- Install/verify 1Password CLI
+- Check for 1Password Desktop App (recommended for biometric unlock)
+- Guide you to install the Chrome extension
+- **Auto-configure Claude Code MCP** (writes to `~/.claude.json`)
 
-### 3. Add to Claude Code
+### 3. Load Chrome Extension
 
-```json
-{
-  "mcpServers": {
-    "vaultrunner": {
-      "command": "npx",
-      "args": ["vaultrunner-mcp"]
-    }
-  }
-}
-```
+1. Go to `chrome://extensions`
+2. Enable **Developer mode** (toggle in top right)
+3. Click **Load unpacked** and select `packages/chrome-extension/dist`
 
-### 4. Automate
+### 4. Restart Claude Code
+
+After setup completes, restart Claude Code to load the VaultRunner MCP. You can verify it's working by asking Claude to check the vault status.
+
+### 5. Connect and Automate
+
+**Important:** The browser extension must be connected for logins to work. This requires:
+- Chrome open
+- VaultRunner extension enabled
+- An active browser tab
+
+You can check connection status anytime—Claude will show you if the extension is connected.
 
 ```
 You: "Log into my AWS console and check EC2 instances"
@@ -234,23 +237,51 @@ The `smart_login` tool automates this entire flow using learned patterns.
 
 ## Requirements
 
-- **1Password** with CLI access enabled
-- **Chrome** with VaultRunner extension
-- **Claude Code** with browser automation
+- **1Password** with CLI access enabled ([install guide](https://developer.1password.com/docs/cli/get-started/))
+- **1Password Desktop App** (optional, enables biometric unlock for CLI)
+- **Chrome** browser with VaultRunner extension loaded
+- **Claude Code** for AI-powered browser automation
 - **Node.js 18+**
+
+### Runtime Requirements
+
+For logins to work, you need:
+1. **1Password vault unlocked** — Use biometrics or sign in via `op signin`
+2. **Browser extension connected** — Chrome must be open with the VaultRunner extension active
+
+Use `get_vault_status` in Claude Code to check both requirements.
 
 ### Optional (for 2FA)
 
-- **macOS Messages** — For SMS code reading (requires Full Disk Access)
-- **Gmail** — For email code reading (requires OAuth setup)
+- **macOS Messages** — For SMS code reading (requires Full Disk Access, run `npx vaultrunner setup-messages`)
+- **Gmail** — For email code reading (requires Google OAuth, run `npx vaultrunner setup-gmail`)
 
 ## CLI Commands
 
+### Setup & Status
+
 ```bash
-npx vaultrunner setup      # Configure 1Password integration
-npx vaultrunner status     # Check system status
-npx vaultrunner stats      # View login statistics
-npx vaultrunner dashboard  # Open web dashboard
+npx vaultrunner setup           # Full setup wizard (1Password CLI, Chrome extension, Claude Code MCP)
+npx vaultrunner status          # Check system status and connections
+npx vaultrunner config          # Show manual Claude Code MCP configuration
+```
+
+### 2FA Configuration
+
+```bash
+npx vaultrunner setup-messages  # Configure SMS/iMessage reading (macOS, requires Full Disk Access)
+npx vaultrunner setup-gmail     # Connect Gmail for email 2FA codes (requires Google OAuth)
+npx vaultrunner disconnect-gmail # Remove Gmail connection
+npx vaultrunner test-2fa        # Test 2FA code reading from all sources
+```
+
+### Learning & Stats
+
+```bash
+npx vaultrunner stats           # View login statistics and learned patterns
+npx vaultrunner contribute-rules # Share learned patterns with the community
+npx vaultrunner clear-history   # Clear login history (keeps learned rules)
+npx vaultrunner dashboard       # Open web dashboard
 ```
 
 ## Use Cases
@@ -261,6 +292,35 @@ npx vaultrunner dashboard  # Open web dashboard
 - **SaaS Management**: Access Salesforce, HubSpot, Zendesk
 - **E-commerce**: Manage Shopify, Amazon Seller accounts
 - **Any authenticated workflow** Claude couldn't do before
+
+## Troubleshooting
+
+### "Extension not connected"
+
+The browser extension must be active for logins to work:
+1. Open Chrome browser
+2. Ensure the VaultRunner extension is enabled in `chrome://extensions`
+3. Have at least one tab open (the extension connects via active tabs)
+4. Check status with `get_vault_status` in Claude Code
+
+### "Vault not unlocked"
+
+1Password needs to be unlocked:
+1. Open 1Password Desktop App and unlock with biometrics, OR
+2. Run `op signin` in terminal to authenticate via CLI
+
+### MCP not loading in Claude Code
+
+1. Run `npx vaultrunner setup` to auto-configure
+2. Restart Claude Code after setup
+3. Check `~/.claude.json` contains the vaultrunner MCP config
+4. Run `npx vaultrunner config` to see manual configuration if needed
+
+### 2FA codes not found
+
+- **SMS**: Run `npx vaultrunner setup-messages` and grant Full Disk Access
+- **Gmail**: Run `npx vaultrunner setup-gmail` to connect your account
+- **TOTP**: Ensure the 1Password item has a one-time password configured
 
 ## Development
 
