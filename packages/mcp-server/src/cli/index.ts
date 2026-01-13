@@ -54,9 +54,31 @@ const EXTENSION_WEBSTORE_URL = "https://chromewebstore.google.com/detail/vaultru
 const CLAUDE_CONFIG_PATH = join(homedir(), ".claude.json");
 
 /**
+ * Find the repo root by looking for package.json with name "vaultrunner"
+ */
+function findRepoRoot(): string | null {
+  let dir = process.cwd();
+  while (dir !== "/") {
+    const pkgPath = join(dir, "package.json");
+    if (existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+        if (pkg.name === "vaultrunner" && pkg.private === true) {
+          return dir;
+        }
+      } catch {
+        // Not valid JSON, continue
+      }
+    }
+    dir = join(dir, "..");
+  }
+  return null;
+}
+
+/**
  * Configure Claude Code MCP settings
  */
-function configureClaudeCode(): { success: boolean; alreadyConfigured: boolean; error?: string } {
+function configureClaudeCode(): { success: boolean; alreadyConfigured: boolean; error?: string; usedLocalPath?: boolean } {
   try {
     let config: Record<string, unknown> = {};
 
@@ -78,16 +100,28 @@ function configureClaudeCode(): { success: boolean; alreadyConfigured: boolean; 
       return { success: true, alreadyConfigured: true };
     }
 
-    // Add vaultrunner config
-    mcpServers.vaultrunner = {
-      command: "npx",
-      args: ["vaultrunner-mcp"]
-    };
+    // Check if we're inside the vaultrunner repo with a built dist
+    const repoRoot = findRepoRoot();
+    const localMcpPath = repoRoot ? join(repoRoot, "packages/mcp-server/dist/index.js") : null;
+    const useLocalPath = localMcpPath && existsSync(localMcpPath);
+
+    // Add vaultrunner config - use local path if available, otherwise npx
+    if (useLocalPath && localMcpPath) {
+      mcpServers.vaultrunner = {
+        command: "node",
+        args: [localMcpPath]
+      };
+    } else {
+      mcpServers.vaultrunner = {
+        command: "npx",
+        args: ["vaultrunner-mcp"]
+      };
+    }
 
     // Write back
     writeFileSync(CLAUDE_CONFIG_PATH, JSON.stringify(config, null, 2));
 
-    return { success: true, alreadyConfigured: false };
+    return { success: true, alreadyConfigured: false, usedLocalPath: !!useLocalPath };
   } catch (err) {
     const error = err instanceof Error ? err.message : "Unknown error";
     return { success: false, alreadyConfigured: false, error };
@@ -219,6 +253,9 @@ program
         console.log(`   ${colors.green}✓${colors.reset} Already configured in ${colors.dim}~/.claude.json${colors.reset}`);
       } else {
         console.log(`   ${colors.green}✓${colors.reset} Added to ${colors.dim}~/.claude.json${colors.reset}`);
+        if (claudeConfig.usedLocalPath) {
+          console.log(`   ${colors.dim}Using local build from this repo${colors.reset}`);
+        }
         console.log(`   ${colors.yellow}⚠${colors.reset} Restart Claude Code to load VaultRunner`);
       }
     } else {
