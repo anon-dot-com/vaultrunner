@@ -47,7 +47,7 @@ Add this to your Claude Code MCP configuration:
   "mcpServers": {
     "vaultrunner": {
       "command": "npx",
-      "args": ["vaultrunner"]
+      "args": ["vaultrunner-mcp"]
     }
   }
 }
