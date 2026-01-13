@@ -4,7 +4,7 @@
   "description": "Chrome extension for VaultRunner - secure credential injection",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp manifest.json dist/ && cp -r icons dist/",
     "dev": "tsc --watch",
     "lint": "tsc --noEmit"
   },
