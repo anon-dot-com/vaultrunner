@@ -106,7 +106,7 @@ This configures 1Password CLI integration and verifies your setup.
   "mcpServers": {
     "vaultrunner": {
       "command": "npx",
-      "args": ["vaultrunner"]
+      "args": ["vaultrunner-mcp"]
     }
   }
 }
