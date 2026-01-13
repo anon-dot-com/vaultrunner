@@ -276,11 +276,20 @@ Use `get_vault_status` in Claude Code to check both requirements.
 
 ## CLI Commands
 
-All commands should be run from the vaultrunner directory. You can create an alias for convenience:
+All commands should be run from the vaultrunner directory.
 
+**Option 1: Use node directly (recommended)**
 ```bash
-alias vaultrunner="node $(pwd)/packages/mcp-server/dist/cli/index.js"
+node packages/mcp-server/dist/cli/index.js <command>
 ```
+
+**Option 2: Create an alias for convenience**
+```bash
+# Add to your shell profile (.bashrc, .zshrc, etc.)
+alias vaultrunner="node /path/to/vaultrunner/packages/mcp-server/dist/cli/index.js"
+```
+
+The examples below use the alias. If you haven't set it up, replace `vaultrunner` with `node packages/mcp-server/dist/cli/index.js`.
 
 ### Setup & Status
 
@@ -324,8 +333,13 @@ VaultRunner includes a web dashboard for monitoring and debugging login flows. T
 The dashboard starts automatically after setup completes. To start it manually:
 
 ```bash
+# Using the alias (if configured)
 vaultrunner dashboard              # Start on default port (19877)
 vaultrunner dashboard --port 8080  # Start on custom port
+
+# Or using node directly
+node packages/mcp-server/dist/cli/index.js dashboard
+node packages/mcp-server/dist/cli/index.js dashboard --port 8080
 ```
 
 The dashboard runs at `http://localhost:19877` and opens in your browser automatically.
