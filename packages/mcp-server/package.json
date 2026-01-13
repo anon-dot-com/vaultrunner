@@ -1,19 +1,51 @@
 {
-  "name": "@vaultrunner/mcp-server",
+  "name": "vaultrunner",
   "version": "0.1.0",
-  "description": "MCP server for VaultRunner - secure 1Password autofill",
+  "description": "MCP server for VaultRunner - secure 1Password autofill for Claude Code",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "bin": {
     "vaultrunner": "dist/cli/index.js",
     "vaultrunner-mcp": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc && cp -r src/dashboard/public dist/dashboard/",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "1password",
+    "mcp",
+    "claude",
+    "claude-code",
+    "autofill",
+    "security",
+    "browser-automation",
+    "credentials"
+  ],
+  "author": "Daniel Mason",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anon-dot-com/vaultrunner.git",
+    "directory": "packages/mcp-server"
+  },
+  "homepage": "https://github.com/anon-dot-com/vaultrunner#readme",
+  "bugs": {
+    "url": "https://github.com/anon-dot-com/vaultrunner/issues"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

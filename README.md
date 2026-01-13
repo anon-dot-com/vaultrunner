@@ -78,17 +78,26 @@ VaultRunner connects Claude to 1Password, enabling secure authenticated automati
 
 ## Quick Start
 
-### 1. Install VaultRunner Extension
+### 1. Install Chrome Extension
 
-Install from [Chrome Web Store](https://chromewebstore.google.com/detail/vaultrunner/EXTENSION_ID) or load manually for development.
+```bash
+git clone https://github.com/anon-dot-com/vaultrunner.git
+cd vaultrunner
+pnpm install && pnpm build
+```
 
-### 2. Run Setup
+Then load in Chrome:
+1. Go to `chrome://extensions`
+2. Enable **Developer mode** (toggle in top right)
+3. Click **Load unpacked** and select `packages/chrome-extension/dist`
+
+### 2. Configure MCP Server
 
 ```bash
 npx vaultrunner setup
 ```
 
-Configures 1Password CLI integration and verifies your setup.
+This configures 1Password CLI integration and verifies your setup.
 
 ### 3. Add to Claude Code
 
@@ -97,7 +106,7 @@ Configures 1Password CLI integration and verifies your setup.
   "mcpServers": {
     "vaultrunner": {
       "command": "npx",
-      "args": ["vaultrunner-mcp"]
+      "args": ["vaultrunner"]
     }
   }
 }
