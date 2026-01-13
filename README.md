@@ -255,6 +255,8 @@ The `smart_login` tool automates this entire flow using learned patterns.
 
 ## Requirements
 
+- **Claude Max subscription** — Required for Claude Code access
+- **Claude for Chrome extension** — [Install from Chrome Web Store](https://chromewebstore.google.com/publisher/anthropic/u308d63ea0533efcf7ba778ad42da7390)
 - **1Password** with CLI access enabled ([install guide](https://developer.1password.com/docs/cli/get-started/))
 - **1Password Desktop App** (optional, enables biometric unlock for CLI)
 - **Chrome** browser with VaultRunner extension loaded
