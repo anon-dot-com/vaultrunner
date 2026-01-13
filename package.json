@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "pnpm --filter @vaultrunner/mcp-server dev",
     "build": "pnpm -r build",
-    "lint": "pnpm -r lint"
+    "lint": "pnpm -r lint",
+    "setup": "node packages/mcp-server/dist/cli/index.js setup"
   },
   "keywords": [
     "1password",

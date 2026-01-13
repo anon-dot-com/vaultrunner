@@ -78,7 +78,7 @@ VaultRunner connects Claude to 1Password, enabling secure authenticated automati
 
 ## Quick Start
 
-### 1. Install Chrome Extension
+### 1. Clone and Build
 
 ```bash
 git clone https://github.com/anon-dot-com/vaultrunner.git
@@ -86,33 +86,28 @@ cd vaultrunner
 pnpm install && pnpm build
 ```
 
-Then load in Chrome:
+### 2. Load Chrome Extension
+
 1. Go to `chrome://extensions`
 2. Enable **Developer mode** (toggle in top right)
 3. Click **Load unpacked** and select `packages/chrome-extension/dist`
 
-### 2. Configure MCP Server
+### 3. Run Setup
 
 ```bash
-npx vaultrunner setup
+pnpm run setup
 ```
 
-This configures 1Password CLI integration and verifies your setup.
+This will:
+- Check/install 1Password CLI
+- Automatically configure Claude Code (`~/.claude.json`)
+- Show status of optional 2FA sources (Messages, Gmail)
 
-### 3. Add to Claude Code
+### 4. Restart Claude Code
 
-```json
-{
-  "mcpServers": {
-    "vaultrunner": {
-      "command": "npx",
-      "args": ["vaultrunner-mcp"]
-    }
-  }
-}
-```
+Restart Claude Code to load the VaultRunner MCP server.
 
-### 4. Automate
+### 5. Automate
 
 ```
 You: "Log into my AWS console and check EC2 instances"
