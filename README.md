@@ -96,6 +96,7 @@ This will:
 - Install/verify 1Password CLI
 - Check for 1Password Desktop App (recommended for biometric unlock)
 - Guide you to install the Chrome extension
+- Launch the VaultRunner dashboard in your browser
 
 ### 3. Load Chrome Extension
 
@@ -275,11 +276,20 @@ Use `get_vault_status` in Claude Code to check both requirements.
 
 ## CLI Commands
 
-All commands should be run from the vaultrunner directory. You can create an alias for convenience:
+All commands should be run from the vaultrunner directory.
 
+**Option 1: Use node directly (recommended)**
 ```bash
-alias vaultrunner="node $(pwd)/packages/mcp-server/dist/cli/index.js"
+node packages/mcp-server/dist/cli/index.js <command>
 ```
+
+**Option 2: Create an alias for convenience**
+```bash
+# Add to your shell profile (.bashrc, .zshrc, etc.)
+alias vaultrunner="node /path/to/vaultrunner/packages/mcp-server/dist/cli/index.js"
+```
+
+The examples below use the alias. If you haven't set it up, replace `vaultrunner` with `node packages/mcp-server/dist/cli/index.js`.
 
 ### Setup & Status
 
@@ -305,6 +315,45 @@ vaultrunner contribute-rules # Share learned patterns with the community
 vaultrunner clear-history   # Clear login history (keeps learned rules)
 vaultrunner dashboard       # Open web dashboard
 ```
+
+## Dashboard
+
+VaultRunner includes a web dashboard for monitoring and debugging login flows. The dashboard automatically opens after running `vaultrunner setup`.
+
+### Features
+
+- **Login History** — View all login attempts with detailed step-by-step breakdowns
+- **Learned Rules** — See patterns VaultRunner has learned for each site
+- **Success Rates** — Monitor login success rates and identify problematic sites
+- **Active Sessions** — Track which sites you're currently logged into
+- **Rule Contribution** — See which learned patterns are ready to share with the community
+
+### Starting the Dashboard
+
+The dashboard starts automatically after setup completes. To start it manually:
+
+```bash
+# Using the alias (if configured)
+vaultrunner dashboard              # Start on default port (19877)
+vaultrunner dashboard --port 8080  # Start on custom port
+
+# Or using node directly
+node packages/mcp-server/dist/cli/index.js dashboard
+node packages/mcp-server/dist/cli/index.js dashboard --port 8080
+```
+
+The dashboard runs at `http://localhost:19877` and opens in your browser automatically.
+
+### API Endpoints
+
+The dashboard exposes a REST API for programmatic access:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/stats` | Overall login statistics |
+| `GET /api/history` | Login attempt history |
+| `GET /api/rules` | Learned site rules |
+| `GET /api/sessions` | Active login sessions |
 
 ## Use Cases
 

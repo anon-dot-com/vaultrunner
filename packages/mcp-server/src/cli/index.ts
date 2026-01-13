@@ -210,6 +210,37 @@ program
       console.log(`   Or use ${colors.cyan}/mcp${colors.reset} in Claude Code and add manually.`);
       console.log("");
       console.log(`   4. Restart Claude Code to load VaultRunner MCP`);
+      console.log("");
+
+      // Auto-start the dashboard
+      console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
+      console.log("");
+      console.log(`${colors.bold}Starting VaultRunner Dashboard...${colors.reset}`);
+      console.log("");
+
+      try {
+        const dashboardPort = 19877;
+        const { startDashboard } = await import("../dashboard/server.js");
+        await startDashboard(dashboardPort);
+        console.log(`${colors.green}✓${colors.reset} Dashboard running at ${colors.cyan}http://localhost:${dashboardPort}${colors.reset}`);
+        console.log("");
+        console.log(`   The dashboard shows login history, learned patterns, and system status.`);
+        console.log(`   ${colors.dim}Press Ctrl+C to stop${colors.reset}`);
+        console.log("");
+
+        // Open dashboard in browser
+        await open(`http://localhost:${dashboardPort}`);
+      } catch (err) {
+        const error = err as Error & { code?: string };
+        if (error.code === "EADDRINUSE") {
+          console.log(`${colors.yellow}○${colors.reset} Dashboard already running at ${colors.cyan}http://localhost:19877${colors.reset}`);
+          await open("http://localhost:19877");
+        } else {
+          console.log(`${colors.yellow}○${colors.reset} Could not start dashboard: ${error.message}`);
+          console.log(`   ${colors.dim}Run manually: vaultrunner dashboard${colors.reset}`);
+        }
+        console.log("");
+      }
     } else {
       console.log(`${colors.yellow}${colors.bold}! Some requirements need attention${colors.reset}`);
       console.log(`   Please install the missing components above.`);
