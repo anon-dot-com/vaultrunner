@@ -2,6 +2,8 @@ import { WebSocketServer, WebSocket } from "ws";
 import { randomUUID } from "crypto";
 
 const BRIDGE_PORT = 19876;
+const PING_INTERVAL_MS = 10000; // Ping every 10 seconds
+const PONG_TIMEOUT_MS = 5000; // Consider dead if no pong within 5 seconds
 
 interface ResponsePayload {
   success: boolean;
@@ -30,6 +32,9 @@ export class ExtensionBridge {
   private connectedExtension: WebSocket | null = null;
   private pendingRequests: Map<string, PendingRequest> = new Map();
   private isStarted = false;
+  private _isConnected = false;
+  private pingInterval: NodeJS.Timeout | null = null;
+  private pongTimeout: NodeJS.Timeout | null = null;
 
   /**
    * Start the WebSocket server
@@ -44,7 +49,15 @@ export class ExtensionBridge {
 
     this.wss.on("connection", (ws) => {
       console.error("[VaultRunner] Chrome extension connected");
+
+      // Clean up any existing connection
+      this.cleanupConnection();
+
       this.connectedExtension = ws;
+      this._isConnected = true;
+
+      // Set up ping/pong heartbeat
+      this.startHeartbeat(ws);
 
       ws.on("message", (data) => {
         try {
@@ -55,15 +68,26 @@ export class ExtensionBridge {
         }
       });
 
+      ws.on("pong", () => {
+        // Connection is alive, clear the pong timeout
+        if (this.pongTimeout) {
+          clearTimeout(this.pongTimeout);
+          this.pongTimeout = null;
+        }
+      });
+
       ws.on("close", () => {
         console.error("[VaultRunner] Chrome extension disconnected");
         if (this.connectedExtension === ws) {
-          this.connectedExtension = null;
+          this.cleanupConnection();
         }
       });
 
       ws.on("error", (error) => {
         console.error("[VaultRunner] WebSocket error:", error);
+        if (this.connectedExtension === ws) {
+          this.cleanupConnection();
+        }
       });
     });
 
@@ -76,6 +100,7 @@ export class ExtensionBridge {
    * Stop the WebSocket server
    */
   stop(): void {
+    this.cleanupConnection();
     if (this.wss) {
       this.wss.close();
       this.wss = null;
@@ -84,13 +109,49 @@ export class ExtensionBridge {
   }
 
   /**
+   * Clean up connection state and timers
+   */
+  private cleanupConnection(): void {
+    this._isConnected = false;
+    this.connectedExtension = null;
+
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+    if (this.pongTimeout) {
+      clearTimeout(this.pongTimeout);
+      this.pongTimeout = null;
+    }
+  }
+
+  /**
+   * Start heartbeat ping/pong to detect dead connections
+   */
+  private startHeartbeat(ws: WebSocket): void {
+    this.pingInterval = setInterval(() => {
+      if (ws.readyState !== WebSocket.OPEN) {
+        this.cleanupConnection();
+        return;
+      }
+
+      // Send ping
+      ws.ping();
+
+      // Set timeout for pong response
+      this.pongTimeout = setTimeout(() => {
+        console.error("[VaultRunner] No pong received, connection dead");
+        this.cleanupConnection();
+        ws.terminate();
+      }, PONG_TIMEOUT_MS);
+    }, PING_INTERVAL_MS);
+  }
+
+  /**
    * Check if extension is connected
    */
   isConnected(): boolean {
-    return (
-      this.connectedExtension !== null &&
-      this.connectedExtension.readyState === WebSocket.OPEN
-    );
+    return this._isConnected;
   }
 
   /**
@@ -129,7 +190,18 @@ export class ExtensionBridge {
         reject: () => {},
         timeout
       });
-      this.connectedExtension!.send(JSON.stringify(request));
+
+      try {
+        this.connectedExtension!.send(JSON.stringify(request));
+      } catch (error) {
+        clearTimeout(timeout);
+        this.pendingRequests.delete(requestId);
+        this.cleanupConnection();
+        resolve({
+          success: false,
+          error: "Failed to send request: connection lost",
+        });
+      }
     });
   }
 

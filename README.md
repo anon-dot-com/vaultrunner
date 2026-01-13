@@ -96,6 +96,7 @@ This will:
 - Install/verify 1Password CLI
 - Check for 1Password Desktop App (recommended for biometric unlock)
 - Guide you to install the Chrome extension
+- Launch the VaultRunner dashboard in your browser
 
 ### 3. Load Chrome Extension
 
@@ -305,6 +306,40 @@ vaultrunner contribute-rules # Share learned patterns with the community
 vaultrunner clear-history   # Clear login history (keeps learned rules)
 vaultrunner dashboard       # Open web dashboard
 ```
+
+## Dashboard
+
+VaultRunner includes a web dashboard for monitoring and debugging login flows. The dashboard automatically opens after running `vaultrunner setup`.
+
+### Features
+
+- **Login History** — View all login attempts with detailed step-by-step breakdowns
+- **Learned Rules** — See patterns VaultRunner has learned for each site
+- **Success Rates** — Monitor login success rates and identify problematic sites
+- **Active Sessions** — Track which sites you're currently logged into
+- **Rule Contribution** — See which learned patterns are ready to share with the community
+
+### Starting the Dashboard
+
+The dashboard starts automatically after setup completes. To start it manually:
+
+```bash
+vaultrunner dashboard              # Start on default port (19877)
+vaultrunner dashboard --port 8080  # Start on custom port
+```
+
+The dashboard runs at `http://localhost:19877` and opens in your browser automatically.
+
+### API Endpoints
+
+The dashboard exposes a REST API for programmatic access:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/stats` | Overall login statistics |
+| `GET /api/history` | Login attempt history |
+| `GET /api/rules` | Learned site rules |
+| `GET /api/sessions` | Active login sessions |
 
 ## Use Cases
 

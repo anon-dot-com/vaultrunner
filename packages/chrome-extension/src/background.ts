@@ -7,6 +7,8 @@
 
 const BRIDGE_URL = "ws://localhost:19876";
 const RECONNECT_INTERVAL = 5000;
+const KEEPALIVE_ALARM_NAME = "vaultrunner-keepalive";
+const KEEPALIVE_INTERVAL_MINUTES = 0.4; // ~24 seconds (must be > 0.33 for Chrome)
 
 interface FillRequest {
   type: "fill_credentials";
@@ -424,3 +426,34 @@ chrome.action.onClicked.addListener(() => {
   const status = socket?.readyState === WebSocket.OPEN ? "Connected" : "Disconnected";
   console.log(`[VaultRunner] Status: ${status}`);
 });
+
+/**
+ * Keep-alive mechanism using Chrome Alarms API
+ * This prevents the service worker from going dormant
+ */
+async function setupKeepAlive(): Promise<void> {
+  // Create a recurring alarm to keep the service worker alive
+  await chrome.alarms.create(KEEPALIVE_ALARM_NAME, {
+    periodInMinutes: KEEPALIVE_INTERVAL_MINUTES,
+  });
+  console.log("[VaultRunner] Keep-alive alarm set up");
+}
+
+// Handle the keep-alive alarm
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === KEEPALIVE_ALARM_NAME) {
+    // Check connection and reconnect if needed
+    if (socket?.readyState !== WebSocket.OPEN) {
+      console.log("[VaultRunner] Keep-alive: reconnecting...");
+      connect();
+    } else {
+      console.log("[VaultRunner] Keep-alive: connection healthy");
+    }
+  }
+});
+
+// Set up keep-alive on install/update
+chrome.runtime.onInstalled.addListener(setupKeepAlive);
+
+// Also set up keep-alive now (in case service worker restarted)
+setupKeepAlive();
