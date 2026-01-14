@@ -495,7 +495,7 @@
         <a href="/#install">Install</a>
         <a href="/#security">Security</a>
         <a href="https://github.com/anon-dot-com/vaultrunner" target="_blank">GitHub</a>
-        <a href="https://chromewebstore.google.com/detail/vaultrunner" class="btn btn-primary">Get Extension</a>
+        <a href="https://github.com/anon-dot-com/vaultrunner#quick-start" class="btn btn-primary">Get Started</a>
       </div>
     </div>
   </nav>
@@ -662,13 +662,13 @@
           </div>
 
           <div class="faq-item">
-            <h3>Can Claude see my passwords?</h3>
-            <p>No. Credentials flow directly from 1Password to your browser. Claude only receives confirmation that the fields were filled—never the actual values.</p>
+            <h3>Does Claude see my passwords?</h3>
+            <p>Claude receives credentials from VaultRunner via MCP and uses Claude for Chrome to fill forms. All processing happens locally on your machine—nothing is sent to external servers.</p>
           </div>
 
           <div class="faq-item">
             <h3>How do I update VaultRunner?</h3>
-            <p>The MCP server updates automatically via npx. For the Chrome extension, updates are delivered through the Chrome Web Store.</p>
+            <p>The MCP server updates automatically via npx. Run <code>npx vaultrunner@latest setup</code> to ensure you have the latest version.</p>
           </div>
         </div>
       </div>

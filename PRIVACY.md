@@ -4,76 +4,114 @@
 
 ## Overview
 
-VaultRunner is a Chrome extension that enables secure credential autofill for AI-assisted browser automation. This privacy policy explains what data VaultRunner collects, how it's used, and your rights regarding that data.
+VaultRunner is an MCP (Model Context Protocol) server that provides secure credential management for AI-assisted browser automation. It bridges 1Password credentials to Claude, which uses the Claude for Chrome extension for browser interactions.
 
-## Core Privacy Principle
+## How VaultRunner Works
 
-**VaultRunner never stores, transmits, or exposes your passwords to AI systems.**
+VaultRunner operates as a local MCP server that:
 
-Credentials flow directly from your 1Password vault to web page form fields. The AI assistant only receives confirmation that fields were filled, never the actual credential values.
+1. **Reads credentials from 1Password** using the official 1Password CLI (`op`)
+2. **Provides credential data to Claude** via the MCP protocol
+3. **Claude for Chrome performs browser automation** (filling forms, clicking buttons)
+
+```
+Claude Code <-> VaultRunner (MCP) <-> 1Password CLI
+                    |
+            Claude for Chrome <-> Browser
+```
 
 ## Data Collection
 
-### What VaultRunner Does NOT Collect
+### What We DON'T Collect
 
-- Passwords or credentials
-- Form field values
-- Browsing history
-- Personal information
-- Analytics or usage data
-- Cookies or session tokens
+- **No passwords or secrets sent externally** - Credentials flow from 1Password to the browser locally
+- **No browsing history** - We don't track which sites you visit
+- **No personal information** - No names, emails, or identifiers collected
+- **No analytics or telemetry** - No data sent to external servers
+- **No cloud storage** - Everything runs locally on your machine
 
-### What VaultRunner Does Access
+### What We DO Store (Locally)
 
-1. **Website Domain Names**: When you request to fill credentials, VaultRunner accesses the domain name of the current tab to match it with saved logins in 1Password.
+VaultRunner stores the following data **locally on your machine** in `~/.vaultrunner/`:
 
-2. **Form Field Detection**: VaultRunner identifies login forms on web pages to determine where to fill credentials. This detection happens locally in your browser.
+| File | Purpose |
+|------|---------|
+| `config.json` | Gmail OAuth settings (if configured) |
+| `gmail-tokens.json` | Gmail API tokens (if configured) |
+| `login-history.json` | Login attempt history for learning |
+| `login-patterns.json` | Learned login patterns per domain |
+| `account-preferences.json` | Default account preferences per domain |
 
-3. **1Password Item Metadata**: VaultRunner retrieves login item titles and usernames (not passwords) from 1Password to display available accounts for a domain.
+**All data remains on your local machine and is never transmitted externally.**
 
-## Data Flow
+## Credential Flow
 
-```
-1Password CLI (local) -> MCP Server (local) -> Chrome Extension (local) -> Web Page Form
-                                                        ^
-                                                        |
-                                              Credentials never leave
-                                              your local machine except
-                                              to fill the form
-```
+When you log into a website using VaultRunner:
+
+1. **You request a login** through Claude
+2. **VaultRunner queries 1Password CLI** for matching credentials
+3. **Credentials are returned to Claude** (username and password)
+4. **Claude for Chrome fills the form** in your browser
+5. **Login history is saved locally** for pattern learning
+
+### Security Considerations
+
+- **1Password authentication required** - You must unlock 1Password (biometrics or master password)
+- **No credential caching** - Credentials are fetched fresh each time from 1Password
+- **Local processing only** - No external servers involved
+- **Open source** - Full code available for audit at [github.com/anon-dot-com/vaultrunner](https://github.com/anon-dot-com/vaultrunner)
+
+## 2FA Code Sources
+
+VaultRunner can read 2FA codes from:
+
+### 1Password TOTP
+- Reads TOTP secrets directly from 1Password items
+- Requires the item to have a TOTP field configured
+
+### SMS (macOS Messages)
+- Reads from the local Messages database (`~/Library/Messages/chat.db`)
+- Requires **Full Disk Access** permission for your terminal
+- Only reads recent messages (configurable, default 5 minutes)
+- No messages are stored or transmitted
+
+### Gmail
+- Uses OAuth 2.0 to access your Gmail (read-only)
+- Searches for recent verification emails
+- Tokens stored locally in `~/.vaultrunner/gmail-tokens.json`
+- You can disconnect anytime with `vaultrunner disconnect-gmail`
 
 ## Third-Party Services
 
-VaultRunner communicates with:
+### 1Password CLI
+- VaultRunner uses the official 1Password CLI
+- Subject to [1Password's Privacy Policy](https://1password.com/legal/privacy/)
 
-1. **1Password CLI**: Runs locally on your machine to access your vault. Credentials are retrieved locally through the official 1Password command-line interface.
+### Google Gmail API (Optional)
+- Only if you configure Gmail for 2FA codes
+- Read-only access to search for verification emails
+- Subject to [Google's Privacy Policy](https://policies.google.com/privacy)
 
-2. **Local MCP Server**: A local server running on your machine that coordinates between the AI assistant and the Chrome extension. No data is sent to external servers.
+### Claude for Chrome
+- Browser automation is performed by Anthropic's Claude for Chrome extension
+- Subject to [Anthropic's Privacy Policy](https://www.anthropic.com/privacy)
 
-## Data Storage
+## Data Retention
 
-VaultRunner stores minimal configuration data locally:
-
-- **Access permissions**: Records which credential items you've approved for autofill
-- **Configuration settings**: User preferences for the extension
-
-This data is stored in `~/.vaultrunner/` on your local machine and is never transmitted externally.
-
-## Security
-
-- All communication between components happens locally on your machine
-- Credentials are never logged, cached, or stored by VaultRunner
-- The extension requires explicit user action to fill credentials
-- You can revoke access permissions at any time
+- **Login history**: Stored indefinitely until you clear it (`vaultrunner clear-history`)
+- **Patterns**: Stored indefinitely until you clear them (`vaultrunner clear-patterns`)
+- **Gmail tokens**: Stored until you disconnect (`vaultrunner disconnect-gmail`)
+- **Account preferences**: Stored until you clear them
 
 ## Your Rights
 
-You can:
+You have full control over your data:
 
-- **Review** which credentials you've approved for autofill
-- **Revoke** access to specific credentials at any time
-- **Uninstall** the extension to remove all local data
-- **Inspect** the source code (VaultRunner is open source)
+- **View data**: Check `~/.vaultrunner/` directory
+- **Clear history**: `vaultrunner clear-history`
+- **Clear patterns**: `vaultrunner clear-patterns`
+- **Disconnect Gmail**: `vaultrunner disconnect-gmail`
+- **Delete everything**: Remove the `~/.vaultrunner/` directory
 
 ## Open Source
 
@@ -86,12 +124,14 @@ VaultRunner is not intended for use by children under 13 years of age.
 
 ## Changes to This Policy
 
-We may update this privacy policy from time to time. Changes will be posted to this page with an updated revision date.
+We may update this privacy policy from time to time. Changes will be reflected in the "Last Updated" date above and committed to our public repository.
 
 ## Contact
 
-For questions about this privacy policy or VaultRunner's data practices, please open an issue on our GitHub repository.
+For privacy concerns or questions:
+- **GitHub Issues**: [github.com/anon-dot-com/vaultrunner/issues](https://github.com/anon-dot-com/vaultrunner/issues)
+- **Email**: dm@team.anon.com
 
 ---
 
-**Summary**: VaultRunner helps you securely fill credentials without exposing them to AI. Your passwords stay between 1Password and your browser - never shared with AI assistants or external servers.
+**VaultRunner is open source software developed by [Anonymity Labs, Inc.](https://anon.com)**
