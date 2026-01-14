@@ -1,6 +1,9 @@
 /**
  * Code Extractor
- * Extracts verification codes from message/email text using regex patterns
+ * Extracts verification codes from message/email text
+ *
+ * Simple approach: if message contains verification keywords,
+ * extract any 4-8 digit sequence found.
  */
 
 export interface ExtractedCode {
@@ -9,34 +12,15 @@ export interface ExtractedCode {
   pattern: string;
 }
 
-/**
- * Patterns for extracting verification codes, ordered by confidence
- * High confidence: Explicit mentions of "code", "verification", etc.
- * Medium confidence: Standalone digit sequences in typical code formats
- * Low confidence: Any digit sequence that could be a code
- */
-const CODE_PATTERNS: Array<{ pattern: RegExp; confidence: "high" | "medium" | "low"; name: string }> = [
-  // High confidence - explicit code mentions
-  { pattern: /(?:verification|verify|security)\s*code[:\s]+(\d{4,8})/i, confidence: "high", name: "verification code" },
-  { pattern: /(?:your|the)\s*code\s*(?:is)?[:\s]+(\d{4,8})/i, confidence: "high", name: "your code is" },
-  { pattern: /OTP\s*code\s*(?:is)?[:\s]+(\d{4,8})/i, confidence: "high", name: "OTP code is" },
-  { pattern: /code\s+is[:\s]+(\d{4,8})/i, confidence: "high", name: "code is" },
-  { pattern: /code[:\s]+(\d{4,8})/i, confidence: "high", name: "code:" },
-  { pattern: /OTP[:\s]+(\d{4,8})/i, confidence: "high", name: "OTP" },
-  { pattern: /one.?time\s*(?:password|code|pin)[:\s]+(\d{4,8})/i, confidence: "high", name: "one-time password" },
-  { pattern: /PIN[:\s]+(\d{4,8})/i, confidence: "high", name: "PIN" },
-  { pattern: /passcode[:\s]+(\d{4,8})/i, confidence: "high", name: "passcode" },
-  { pattern: /(\d{4,8})\s*is\s*your\s*(?:verification|security|login)?\s*code/i, confidence: "high", name: "X is your code" },
-  { pattern: /use\s*(\d{4,8})\s*(?:to|as|for)/i, confidence: "high", name: "use X to" },
-
-  // Medium confidence - common patterns without explicit "code" mention
-  { pattern: /(\d{6,8})\s*[-–]\s*\w+/i, confidence: "medium", name: "6-8 digit with suffix" },
-  { pattern: /enter[:\s]+(\d{4,8})/i, confidence: "medium", name: "enter X" },
-  { pattern: /confirm[:\s]+(\d{4,8})/i, confidence: "medium", name: "confirm X" },
-
-  // Low confidence - standalone digit sequences (6-8 digits, common for 2FA)
-  { pattern: /\b(\d{6,8})\b/, confidence: "low", name: "standalone 6-8 digit" },
+// Keywords that indicate a message is about verification codes
+const VERIFICATION_KEYWORDS = [
+  "code", "verify", "verification", "otp", "pin", "passcode",
+  "password", "confirm", "login", "sign in", "authenticate",
+  "security", "2fa", "two-factor", "one-time"
 ];
+
+// Pattern to find 4-8 digit sequences
+const DIGIT_PATTERN = /\b(\d{4,8})\b/g;
 
 /**
  * Extract verification code from text
@@ -46,21 +30,24 @@ const CODE_PATTERNS: Array<{ pattern: RegExp; confidence: "high" | "medium" | "l
 export function extractCode(text: string): ExtractedCode | null {
   if (!text) return null;
 
-  // Normalize whitespace
-  const normalizedText = text.replace(/\s+/g, " ").trim();
+  const lowerText = text.toLowerCase();
 
-  for (const { pattern, confidence, name } of CODE_PATTERNS) {
-    const match = normalizedText.match(pattern);
-    if (match && match[1]) {
-      return {
-        code: match[1],
-        confidence,
-        pattern: name,
-      };
-    }
-  }
+  // Check if message contains verification keywords
+  const hasKeyword = VERIFICATION_KEYWORDS.some(kw => lowerText.includes(kw));
 
-  return null;
+  // Find all digit sequences
+  const matches = [...text.matchAll(DIGIT_PATTERN)];
+  if (matches.length === 0) return null;
+
+  // If message has verification keywords, return first code with high confidence
+  // Otherwise return with low confidence (might be unrelated number)
+  const code = matches[0][1];
+
+  return {
+    code,
+    confidence: hasKeyword ? "high" : "low",
+    pattern: hasKeyword ? "keyword + digits" : "digits only",
+  };
 }
 
 /**
@@ -71,12 +58,7 @@ export function likelyContainsCode(text: string): boolean {
   if (!text) return false;
 
   const lowerText = text.toLowerCase();
-
-  // Quick keyword check
-  const keywords = ["code", "verify", "verification", "otp", "pin", "passcode", "confirm", "login"];
-  const hasKeyword = keywords.some(kw => lowerText.includes(kw));
-
-  // Has a digit sequence
+  const hasKeyword = VERIFICATION_KEYWORDS.some(kw => lowerText.includes(kw));
   const hasDigits = /\d{4,8}/.test(text);
 
   return hasKeyword && hasDigits;
@@ -88,30 +70,21 @@ export function likelyContainsCode(text: string): boolean {
 export function extractAllCodes(text: string): ExtractedCode[] {
   if (!text) return [];
 
-  const normalizedText = text.replace(/\s+/g, " ").trim();
-  const results: ExtractedCode[] = [];
+  const lowerText = text.toLowerCase();
+  const hasKeyword = VERIFICATION_KEYWORDS.some(kw => lowerText.includes(kw));
+
+  const matches = [...text.matchAll(DIGIT_PATTERN)];
   const seenCodes = new Set<string>();
 
-  for (const { pattern, confidence, name } of CODE_PATTERNS) {
-    // Use matchAll for patterns that could match multiple times
-    const globalPattern = new RegExp(pattern.source, pattern.flags + (pattern.flags.includes("g") ? "" : "g"));
-    const matches = normalizedText.matchAll(globalPattern);
-
-    for (const match of matches) {
-      if (match[1] && !seenCodes.has(match[1])) {
-        seenCodes.add(match[1]);
-        results.push({
-          code: match[1],
-          confidence,
-          pattern: name,
-        });
-      }
-    }
-  }
-
-  // Sort by confidence
-  const confidenceOrder = { high: 0, medium: 1, low: 2 };
-  results.sort((a, b) => confidenceOrder[a.confidence] - confidenceOrder[b.confidence]);
-
-  return results;
+  return matches
+    .filter(match => {
+      if (seenCodes.has(match[1])) return false;
+      seenCodes.add(match[1]);
+      return true;
+    })
+    .map(match => ({
+      code: match[1],
+      confidence: hasKeyword ? "high" as const : "low" as const,
+      pattern: hasKeyword ? "keyword + digits" : "digits only",
+    }));
 }
