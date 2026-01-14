@@ -1,6 +1,6 @@
 # vaultrunner
 
-The missing auth layer for Claude browser automation. Secure logins. Automatic MFA. Zero credential exposure.
+The missing auth layer for Claude browser automation. Secure logins. Automatic MFA. Local credential handling.
 
 ## Installation
 

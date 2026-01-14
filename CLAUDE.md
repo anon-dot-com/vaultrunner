@@ -159,9 +159,17 @@ get_login_pattern("github.com")
 ### CLI Commands
 
 ```bash
+vaultrunner setup           # Configure 1Password integration
+vaultrunner status          # Check system status
+vaultrunner config          # Show MCP config instructions
 vaultrunner stats           # View login statistics
 vaultrunner history         # View recent login attempts
 vaultrunner patterns        # View learned patterns
+vaultrunner dashboard       # Open web dashboard
+vaultrunner setup-gmail     # Connect Gmail for 2FA codes
+vaultrunner disconnect-gmail # Disconnect Gmail
+vaultrunner setup-messages  # Set up SMS reading (macOS)
+vaultrunner test-2fa        # Test 2FA code reading
 vaultrunner clear-history   # Clear login history
 vaultrunner clear-patterns  # Clear learned patterns
 ```
