@@ -6,6 +6,7 @@
 import { z } from "zod";
 import { isMessagesConfigured, searchMessagesForCode } from "../sources/messages-reader.js";
 import { searchGmailForCode, getGmailStatus } from "../sources/gmail-reader.js";
+import { loginHistory } from "../history/login-history.js";
 
 export const get2faCodeTool = {
   name: "get_2fa_code",
@@ -52,6 +53,12 @@ export const get2faCodeTool = {
       const messagesResult = searchMessagesForCode(searchOptions);
 
       if (messagesResult.found && messagesResult.code) {
+        // Auto-log if session is active
+        const session = loginHistory.getCurrentSession();
+        if (session) {
+          loginHistory.logToolStep("get_2fa_code", { source: "messages", sender: messagesResult.sender }, "success");
+        }
+
         return {
           content: [{
             type: "text" as const,
@@ -75,6 +82,12 @@ export const get2faCodeTool = {
       const gmailResult = await searchGmailForCode(searchOptions);
 
       if (gmailResult.found && gmailResult.code) {
+        // Auto-log if session is active
+        const session = loginHistory.getCurrentSession();
+        if (session) {
+          loginHistory.logToolStep("get_2fa_code", { source: "gmail", sender: gmailResult.sender }, "success");
+        }
+
         return {
           content: [{
             type: "text" as const,
@@ -95,6 +108,12 @@ export const get2faCodeTool = {
     }
 
     // No code found in any source
+    // Auto-log failure if session is active
+    const session = loginHistory.getCurrentSession();
+    if (session) {
+      loginHistory.logToolStep("get_2fa_code", { source, configuredSources }, "failed");
+    }
+
     return {
       content: [{
         type: "text" as const,

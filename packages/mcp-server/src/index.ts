@@ -12,10 +12,16 @@ import {
   getAccountPreferenceTool,
   clearAccountPreferenceTool,
 } from "./tools/set-account-preference.js";
+import {
+  startLoginSessionTool,
+  endLoginSessionTool,
+  getLoginPatternTool,
+  getLoginStatsTool,
+} from "./tools/login-session.js";
 
 const server = new McpServer({
   name: "vaultrunner",
-  version: "0.2.0",
+  version: "0.3.0",
 });
 
 // Register tools
@@ -73,6 +79,35 @@ server.tool(
   clearAccountPreferenceTool.description,
   clearAccountPreferenceTool.inputSchema.shape,
   clearAccountPreferenceTool.handler
+);
+
+// Session and pattern tools
+server.tool(
+  startLoginSessionTool.name,
+  startLoginSessionTool.description,
+  startLoginSessionTool.inputSchema.shape,
+  startLoginSessionTool.handler
+);
+
+server.tool(
+  endLoginSessionTool.name,
+  endLoginSessionTool.description,
+  endLoginSessionTool.inputSchema.shape,
+  endLoginSessionTool.handler
+);
+
+server.tool(
+  getLoginPatternTool.name,
+  getLoginPatternTool.description,
+  getLoginPatternTool.inputSchema.shape,
+  getLoginPatternTool.handler
+);
+
+server.tool(
+  getLoginStatsTool.name,
+  getLoginStatsTool.description,
+  getLoginStatsTool.inputSchema.shape,
+  getLoginStatsTool.handler
 );
 
 // Handle shutdown

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { onePasswordCLI } from "../onepassword/cli.js";
+import { loginHistory } from "../history/login-history.js";
 
 export const getTotpTool = {
   name: "get_totp",
@@ -14,6 +15,12 @@ export const getTotpTool = {
     const totp = await onePasswordCLI.getTOTP(item_id);
 
     if (!totp) {
+      // Auto-log failure if session is active
+      const session = loginHistory.getCurrentSession();
+      if (session) {
+        loginHistory.logToolStep("get_totp", { item_id }, "failed");
+      }
+
       return {
         content: [
           {
@@ -29,6 +36,12 @@ export const getTotpTool = {
           },
         ],
       };
+    }
+
+    // Auto-log success if session is active
+    const session = loginHistory.getCurrentSession();
+    if (session) {
+      loginHistory.logToolStep("get_totp", { item_id }, "success");
     }
 
     return {

@@ -70,6 +70,9 @@ VaultRunner is an MCP server that gives Claude access to your 1Password credenti
 | **SMS 2FA** | Reads verification codes from macOS Messages |
 | **Email 2FA** | Reads verification codes from Gmail |
 | **Account Selection** | Remembers your preferred account per site |
+| **Login Tracking** | Records login attempts with MCP tool steps and browser actions |
+| **Pattern Learning** | Learns successful login flows per domain for future reference |
+| **Dashboard** | Web UI showing login history, success rates, and learned patterns |
 
 ## Quick Start
 
@@ -164,18 +167,59 @@ Claude: [Calls get_credentials(item_id)]
 | `get_account_preference` | Get saved default account |
 | `clear_account_preference` | Clear saved preference |
 
+### Session Tracking
+
+| Tool | Description |
+|------|-------------|
+| `start_login_session` | Start tracking a login attempt (returns known patterns) |
+| `end_login_session` | End session with browser steps taken |
+| `get_login_pattern` | Get stored pattern for a domain |
+| `get_login_stats` | View login history and statistics |
+
+## Dashboard
+
+VaultRunner includes a web dashboard for monitoring login activity:
+
+```bash
+vaultrunner dashboard
+# Opens http://localhost:19877
+```
+
+### What the Dashboard Tracks
+
+| Metric | Description |
+|--------|-------------|
+| **Total Logins** | Number of login attempts and unique sites |
+| **Success Rate** | Percentage of successful logins |
+| **2FA Breakdown** | Logins by 2FA type (TOTP, SMS, Email, None) |
+| **Login History** | Detailed log with domain, account, outcome, steps, and timestamps |
+| **Learned Patterns** | Saved login flows per domain with success rates |
+
+### Login History Details
+
+Each login attempt records:
+- **MCP Tool Steps**: Which VaultRunner tools were called (`list_logins`, `get_credentials`, `get_totp`)
+- **Browser Steps**: Actions taken in Claude for Chrome (`fill_field`, `click_button`)
+- **Account Used**: Which credential was used
+- **2FA Type**: Whether TOTP, SMS, email, or no 2FA was required
+- **Timestamps**: When the login started and completed
+
 ## Login Flow Example
 
-Here's how Claude handles a multi-step login with 2FA:
+Here's how Claude handles a multi-step login with 2FA and session tracking:
 
 ```
-1. list_logins("x.com") → Get available accounts
-2. get_credentials(item_id) → Get username/password
-3. [Claude for Chrome] Fill username, click "Next"
-4. [Claude for Chrome] Fill password, click "Log in"
-5. get_2fa_code(sender="40404") → Read SMS code
-6. [Claude for Chrome] Fill 2FA code, click "Verify"
+1. start_login_session("x.com") → Start tracking, get known pattern
+2. list_logins("x.com") → Get available accounts
+3. get_credentials(item_id) → Get username/password
+4. [Claude for Chrome] Fill username, click "Next"
+5. [Claude for Chrome] Fill password, click "Log in"
+6. get_2fa_code(sender="40404") → Read SMS code
+7. [Claude for Chrome] Fill 2FA code, click "Verify"
+8. end_login_session(success=true, steps=[...]) → Save pattern
 ```
+
+The session tracking automatically logs MCP tool calls, and `end_login_session` saves the browser steps for future reference.
 
 ## Requirements
 
@@ -194,18 +238,27 @@ Here's how Claude handles a multi-step login with 2FA:
 
 ```bash
 # Setup
-node packages/mcp-server/dist/cli/index.js setup          # Full setup wizard
-node packages/mcp-server/dist/cli/index.js status         # Check system status
-node packages/mcp-server/dist/cli/index.js config         # Show MCP config instructions
+vaultrunner setup              # Full setup wizard
+vaultrunner status             # Check system status
+vaultrunner config             # Show MCP config instructions
 
 # 2FA Configuration
-node packages/mcp-server/dist/cli/index.js setup-messages # Configure SMS reading (macOS)
-node packages/mcp-server/dist/cli/index.js setup-gmail    # Connect Gmail for email 2FA
-node packages/mcp-server/dist/cli/index.js disconnect-gmail
-node packages/mcp-server/dist/cli/index.js test-2fa       # Test 2FA code reading
+vaultrunner setup-messages     # Configure SMS reading (macOS)
+vaultrunner setup-gmail        # Connect Gmail for email 2FA
+vaultrunner disconnect-gmail   # Disconnect Gmail
+vaultrunner test-2fa           # Test 2FA code reading
+
+# Dashboard & History
+vaultrunner dashboard          # Launch web dashboard (default: port 19877)
+vaultrunner dashboard --port 8080  # Use custom port
+vaultrunner stats              # View login statistics
+vaultrunner history            # View recent login attempts
+vaultrunner patterns           # View learned login patterns
+vaultrunner clear-history      # Clear login history
+vaultrunner clear-patterns     # Clear learned patterns
 ```
 
-Or create an alias:
+Create an alias for convenience:
 ```bash
 alias vaultrunner="node /path/to/vaultrunner/packages/mcp-server/dist/cli/index.js"
 ```

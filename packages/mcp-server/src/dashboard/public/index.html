@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VaultRunner Dashboard</title>
+  <style>
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --border-color: #30363d;
+      --text-primary: #f0f6fc;
+      --text-secondary: #8b949e;
+      --text-muted: #6e7681;
+      --accent-blue: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-red: #f85149;
+      --accent-yellow: #d29922;
+      --accent-purple: #a371f7;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .logo h1 {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .logo span {
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: normal;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .stat-card .label {
+      color: var(--text-secondary);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .stat-card .value {
+      font-size: 32px;
+      font-weight: 600;
+    }
+
+    .stat-card .sub {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .stat-card.success .value { color: var(--accent-green); }
+    .stat-card.info .value { color: var(--accent-blue); }
+    .stat-card.warning .value { color: var(--accent-yellow); }
+    .stat-card.purple .value { color: var(--accent-purple); }
+    .stat-card.danger .value { color: var(--accent-red); }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    .tab {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .tab.active {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .panel {
+      display: none;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .table-container {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: var(--bg-tertiary);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .badge.success {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--accent-green);
+    }
+
+    .badge.failed {
+      background: rgba(248, 81, 73, 0.15);
+      color: var(--accent-red);
+    }
+
+    .badge.in_progress {
+      background: rgba(210, 153, 34, 0.15);
+      color: var(--accent-yellow);
+    }
+
+    .badge.abandoned {
+      background: rgba(110, 118, 129, 0.15);
+      color: var(--text-muted);
+    }
+
+    .badge.totp {
+      background: rgba(163, 113, 247, 0.15);
+      color: var(--accent-purple);
+    }
+
+    .badge.sms {
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent-blue);
+    }
+
+    .badge.email {
+      background: rgba(210, 153, 34, 0.15);
+      color: var(--accent-yellow);
+    }
+
+    .badge.none {
+      background: rgba(110, 118, 129, 0.15);
+      color: var(--text-muted);
+    }
+
+    .domain-link {
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+
+    .domain-link:hover {
+      text-decoration: underline;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px;
+      color: var(--text-secondary);
+    }
+
+    .btn {
+      background: var(--accent-blue);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .btn.danger {
+      background: var(--accent-red);
+    }
+
+    .btn.secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .time-ago {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .detail-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .detail-modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      max-width: 800px;
+      max-height: 80vh;
+      width: 90%;
+      overflow: auto;
+      padding: 24px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    .step-list {
+      list-style: none;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .step-item:last-child {
+      border-bottom: none;
+    }
+
+    .step-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .step-icon.success {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--accent-green);
+    }
+
+    .step-icon.failed {
+      background: rgba(248, 81, 73, 0.15);
+      color: var(--accent-red);
+    }
+
+    .step-icon.browser {
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent-blue);
+    }
+
+    .step-content {
+      flex: 1;
+    }
+
+    .step-action {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .step-details {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .pattern-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .pattern-header {
+      padding: 16px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s;
+    }
+
+    .pattern-header:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .pattern-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .pattern-title h3 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .pattern-meta {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .pattern-details {
+      display: none;
+      padding: 0 16px 16px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .pattern-card.expanded .pattern-details {
+      display: block;
+    }
+
+    .pattern-card.expanded .pattern-header {
+      background: var(--bg-tertiary);
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .detail-item {
+      background: var(--bg-primary);
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .detail-item .label {
+      color: var(--text-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .detail-item .value {
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+
+    .twofa-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .twofa-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .twofa-card .icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .twofa-card .count {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .twofa-card .label {
+      color: var(--text-muted);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    pre {
+      background: var(--bg-primary);
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      overflow-x: auto;
+      max-height: 300px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <div class="logo-icon">🔐</div>
+        <div>
+          <h1>VaultRunner <span>Dashboard</span></h1>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn secondary" onclick="refreshData()">↻ Refresh</button>
+      </div>
+    </header>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card info">
+        <div class="label">Total Logins</div>
+        <div class="value" id="stat-total">-</div>
+        <div class="sub" id="stat-sites">- unique sites</div>
+      </div>
+      <div class="stat-card success">
+        <div class="label">Success Rate</div>
+        <div class="value" id="stat-rate">-</div>
+        <div class="sub" id="stat-success-count">- successful</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="label">Failed</div>
+        <div class="value" id="stat-failed">-</div>
+        <div class="sub">login attempts</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="label">Patterns</div>
+        <div class="value" id="stat-patterns">-</div>
+        <div class="sub">learned flows</div>
+      </div>
+    </div>
+
+    <!-- 2FA Breakdown -->
+    <div class="twofa-grid" id="twofa-grid">
+      <div class="twofa-card">
+        <div class="icon">🔐</div>
+        <div class="count" id="twofa-totp">0</div>
+        <div class="label">TOTP</div>
+      </div>
+      <div class="twofa-card">
+        <div class="icon">📱</div>
+        <div class="count" id="twofa-sms">0</div>
+        <div class="label">SMS</div>
+      </div>
+      <div class="twofa-card">
+        <div class="icon">📧</div>
+        <div class="count" id="twofa-email">0</div>
+        <div class="label">Email</div>
+      </div>
+      <div class="twofa-card">
+        <div class="icon">❌</div>
+        <div class="count" id="twofa-none">0</div>
+        <div class="label">None</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('history')">Login History</button>
+      <button class="tab" onclick="showTab('patterns')">Learned Patterns</button>
+      <button class="tab" onclick="showTab('debug')">Debug</button>
+    </div>
+
+    <!-- History Panel -->
+    <div id="history-panel" class="panel active">
+      <div class="actions">
+        <button class="btn danger" onclick="clearHistory()">Clear History</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Domain</th>
+              <th>Account</th>
+              <th>Outcome</th>
+              <th>2FA</th>
+              <th>Steps</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody id="history-table">
+            <tr><td colspan="6" class="empty-state">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Patterns Panel -->
+    <div id="patterns-panel" class="panel">
+      <div class="actions">
+        <button class="btn danger" onclick="clearPatterns()">Clear Patterns</button>
+      </div>
+      <div id="patterns-list">
+        <div class="empty-state">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Debug Panel -->
+    <div id="debug-panel" class="panel">
+      <div class="actions">
+        <button class="btn secondary" onclick="copyDebugData()">Copy to Clipboard</button>
+      </div>
+      <div id="debug-content">
+        <pre>Loading...</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div id="detail-modal" class="detail-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">Login Details</h2>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    // Tab switching
+    function showTab(tabId) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
+      document.getElementById(`${tabId}-panel`).classList.add('active');
+    }
+
+    // Time ago helper
+    function timeAgo(dateStr) {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const seconds = Math.floor((now - date) / 1000);
+
+      if (seconds < 60) return 'Just now';
+      if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+      if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+      if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+      return date.toLocaleDateString();
+    }
+
+    // Format browser step
+    function formatBrowserStep(step) {
+      switch (step.action) {
+        case 'fill_field':
+          return `Fill ${step.field || 'field'}`;
+        case 'click_button':
+          return `Click "${step.text || 'button'}"`;
+        case 'navigate':
+          return `Navigate to ${step.url || 'URL'}`;
+        case 'wait':
+          return `Wait ${step.seconds || '?'}s`;
+        default:
+          return step.action;
+      }
+    }
+
+    // Load stats
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+
+        document.getElementById('stat-total').textContent = data.attempts.total;
+        document.getElementById('stat-sites').textContent = `${data.attempts.uniqueSites} unique sites`;
+        document.getElementById('stat-rate').textContent = `${Math.round(data.attempts.successRate * 100)}%`;
+        document.getElementById('stat-success-count').textContent = `${data.attempts.success} successful`;
+        document.getElementById('stat-failed').textContent = data.attempts.failed;
+        document.getElementById('stat-patterns').textContent = data.patterns.total;
+
+        // 2FA breakdown
+        document.getElementById('twofa-totp').textContent = data.twoFactor.totp || 0;
+        document.getElementById('twofa-sms').textContent = data.twoFactor.sms || 0;
+        document.getElementById('twofa-email').textContent = data.twoFactor.email || 0;
+        document.getElementById('twofa-none').textContent = data.twoFactor.none || 0;
+      } catch (err) {
+        console.error('Failed to load stats:', err);
+      }
+    }
+
+    // Load history
+    async function loadHistory() {
+      try {
+        const res = await fetch('/api/history?limit=50');
+        const data = await res.json();
+
+        const tbody = document.getElementById('history-table');
+
+        if (data.attempts.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No login attempts yet. Use VaultRunner to log into sites.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.attempts.map(a => `
+          <tr onclick="showAttemptDetails('${a.id}')" style="cursor: pointer;">
+            <td>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <img src="https://www.google.com/s2/favicons?domain=${a.domain}&sz=16" alt="" style="width: 16px; height: 16px;" onerror="this.style.display='none'">
+                <span class="domain-link">${a.domain}</span>
+              </div>
+            </td>
+            <td>${a.accountUsed || '-'}</td>
+            <td><span class="badge ${a.outcome}">${a.outcome}</span></td>
+            <td><span class="badge ${a.twoFactorType || 'none'}">${a.twoFactorType || 'none'}</span></td>
+            <td>${(a.toolStepCount || 0) + (a.browserStepCount || 0)}</td>
+            <td><span class="time-ago">${timeAgo(a.startedAt)}</span></td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error('Failed to load history:', err);
+        document.getElementById('history-table').innerHTML =
+          '<tr><td colspan="6" class="empty-state">Failed to load history</td></tr>';
+      }
+    }
+
+    // Load patterns
+    async function loadPatterns() {
+      try {
+        const res = await fetch('/api/patterns');
+        const data = await res.json();
+
+        const container = document.getElementById('patterns-list');
+
+        if (data.patterns.length === 0) {
+          container.innerHTML = '<div class="empty-state">No patterns learned yet. Complete logins with browser steps to build patterns.</div>';
+          return;
+        }
+
+        container.innerHTML = data.patterns.map((p, idx) => `
+          <div class="pattern-card" id="pattern-${idx}">
+            <div class="pattern-header" onclick="togglePattern(${idx})">
+              <div class="pattern-title">
+                <img src="https://www.google.com/s2/favicons?domain=${p.domain}&sz=16" alt="" style="width: 16px; height: 16px;" onerror="this.style.display='none'">
+                <h3>${p.domain}</h3>
+                <span class="badge ${p.twoFactorType || 'none'}">${p.twoFactorType || 'no 2FA'}</span>
+              </div>
+              <div class="pattern-meta">
+                <span>${p.successCount} success / ${p.failureCount} fail</span>
+                <span>${Math.round(p.successRate * 100)}%</span>
+              </div>
+            </div>
+            <div class="pattern-details">
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <div class="label">Login URL</div>
+                  <div class="value">${p.loginUrl || 'Not set'}</div>
+                </div>
+                <div class="detail-item">
+                  <div class="label">Success Count</div>
+                  <div class="value">${p.successCount}</div>
+                </div>
+                <div class="detail-item">
+                  <div class="label">Failure Count</div>
+                  <div class="value">${p.failureCount}</div>
+                </div>
+                <div class="detail-item">
+                  <div class="label">Last Updated</div>
+                  <div class="value">${p.lastUpdated ? new Date(p.lastUpdated).toLocaleString() : 'Never'}</div>
+                </div>
+              </div>
+              ${p.browserSteps && p.browserSteps.length > 0 ? `
+              <div style="margin-top: 16px;">
+                <h4 style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase; margin-bottom: 8px;">Browser Steps (${p.browserSteps.length})</h4>
+                <ul class="step-list">
+                  ${p.browserSteps.map(s => `
+                    <li class="step-item">
+                      <div class="step-icon browser">→</div>
+                      <div class="step-content">
+                        <div class="step-action">${formatBrowserStep(s)}</div>
+                      </div>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+              ` : '<p style="color: var(--text-muted); margin-top: 16px;">No browser steps recorded</p>'}
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error('Failed to load patterns:', err);
+        document.getElementById('patterns-list').innerHTML =
+          '<div class="empty-state">Failed to load patterns</div>';
+      }
+    }
+
+    function togglePattern(idx) {
+      const card = document.getElementById(`pattern-${idx}`);
+      card.classList.toggle('expanded');
+    }
+
+    // Show attempt details
+    async function showAttemptDetails(id) {
+      try {
+        const res = await fetch(`/api/history/${id}`);
+        const data = await res.json();
+
+        document.getElementById('modal-title').textContent = `Login to ${data.domain}`;
+        document.getElementById('modal-body').innerHTML = `
+          <div style="margin-bottom: 16px;">
+            <span class="badge ${data.outcome}">${data.outcome}</span>
+            <span style="color: var(--text-muted); margin-left: 8px;">${new Date(data.startedAt).toLocaleString()}</span>
+          </div>
+          ${data.accountUsed ? `<p style="color: var(--text-secondary); margin-bottom: 8px;"><strong>Account:</strong> ${data.accountUsed}</p>` : ''}
+          ${data.twoFactorType && data.twoFactorType !== 'none' ? `<p style="color: var(--text-secondary); margin-bottom: 8px;"><strong>2FA:</strong> ${data.twoFactorType}</p>` : ''}
+          ${data.error ? `<p style="color: var(--accent-red); margin-bottom: 16px;"><strong>Error:</strong> ${data.error}</p>` : ''}
+
+          ${data.toolSteps && data.toolSteps.length > 0 ? `
+          <h4 style="margin: 16px 0 12px; color: var(--text-secondary);">Tool Steps (${data.toolSteps.length})</h4>
+          <ul class="step-list">
+            ${data.toolSteps.map(s => `
+              <li class="step-item">
+                <div class="step-icon ${s.result}">${s.result === 'success' ? '✓' : '✗'}</div>
+                <div class="step-content">
+                  <div class="step-action">${s.tool}</div>
+                  <div class="step-details">${JSON.stringify(s.params)}</div>
+                </div>
+              </li>
+            `).join('')}
+          </ul>
+          ` : ''}
+
+          ${data.browserSteps && data.browserSteps.length > 0 ? `
+          <h4 style="margin: 16px 0 12px; color: var(--text-secondary);">Browser Steps (${data.browserSteps.length})</h4>
+          <ul class="step-list">
+            ${data.browserSteps.map(s => `
+              <li class="step-item">
+                <div class="step-icon browser">→</div>
+                <div class="step-content">
+                  <div class="step-action">${formatBrowserStep(s)}</div>
+                </div>
+              </li>
+            `).join('')}
+          </ul>
+          ` : '<p style="color: var(--text-muted); margin-top: 16px;">No browser steps recorded</p>'}
+        `;
+        document.getElementById('detail-modal').classList.add('active');
+      } catch (err) {
+        console.error('Failed to load attempt details:', err);
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('detail-modal').classList.remove('active');
+    }
+
+    document.getElementById('detail-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'detail-modal') closeModal();
+    });
+
+    // Debug data
+    let debugData = null;
+
+    async function loadDebugData() {
+      try {
+        const res = await fetch('/api/debug/raw');
+        debugData = await res.json();
+        document.querySelector('#debug-content pre').textContent = JSON.stringify(debugData, null, 2);
+      } catch (err) {
+        console.error('Failed to load debug data:', err);
+        document.querySelector('#debug-content pre').textContent = 'Failed to load debug data: ' + err.message;
+      }
+    }
+
+    function copyDebugData() {
+      if (debugData) {
+        navigator.clipboard.writeText(JSON.stringify(debugData, null, 2))
+          .then(() => alert('Debug data copied to clipboard!'))
+          .catch(err => alert('Failed to copy: ' + err.message));
+      }
+    }
+
+    // Clear history
+    async function clearHistory() {
+      if (!confirm('Are you sure you want to clear all login history?')) return;
+
+      try {
+        await fetch('/api/history/clear', { method: 'POST' });
+        refreshData();
+      } catch (err) {
+        console.error('Failed to clear history:', err);
+      }
+    }
+
+    // Clear patterns
+    async function clearPatterns() {
+      if (!confirm('Are you sure you want to clear all learned patterns?')) return;
+
+      try {
+        await fetch('/api/patterns/clear', { method: 'POST' });
+        refreshData();
+      } catch (err) {
+        console.error('Failed to clear patterns:', err);
+      }
+    }
+
+    // Refresh all data
+    function refreshData() {
+      loadStats();
+      loadHistory();
+      loadPatterns();
+      loadDebugData();
+    }
+
+    // Initial load
+    refreshData();
+
+    // Auto-refresh every 30 seconds
+    setInterval(refreshData, 30000);
+  </script>
+</body>
+</html>

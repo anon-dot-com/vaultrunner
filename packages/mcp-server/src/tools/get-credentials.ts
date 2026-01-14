@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { onePasswordCLI } from "../onepassword/cli.js";
+import { loginHistory } from "../history/login-history.js";
 
 export const getCredentialsTool = {
   name: "get_credentials",
@@ -14,6 +15,12 @@ export const getCredentialsTool = {
     const credentials = await onePasswordCLI.getCredentials(item_id);
 
     if (!credentials) {
+      // Auto-log failure if session is active
+      const session = loginHistory.getCurrentSession();
+      if (session) {
+        loginHistory.logToolStep("get_credentials", { item_id }, "failed");
+      }
+
       return {
         content: [
           {
@@ -29,6 +36,16 @@ export const getCredentialsTool = {
           },
         ],
       };
+    }
+
+    // Auto-log success if session is active
+    const session = loginHistory.getCurrentSession();
+    if (session) {
+      loginHistory.logToolStep(
+        "get_credentials",
+        { item_id, username: credentials.username },
+        "success"
+      );
     }
 
     return {

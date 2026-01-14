@@ -14,6 +14,9 @@ import { createInterface } from "readline";
 import { setupGmail, disconnectGmail } from "../sources/gmail-oauth.js";
 import { isMessagesConfigured, checkMessagesAccess } from "../sources/messages-reader.js";
 import { getGmailStatus } from "../sources/gmail-reader.js";
+import { loginHistory } from "../history/login-history.js";
+import { patternStore } from "../history/pattern-store.js";
+import { startDashboard } from "../dashboard/server.js";
 
 const program = new Command();
 
@@ -118,7 +121,7 @@ async function install1PasswordCLI(): Promise<boolean> {
 program
   .name("vaultrunner")
   .description("1Password credentials for Claude browser automation")
-  .version("0.2.0");
+  .version("0.3.0");
 
 program
   .command("setup")
@@ -531,6 +534,263 @@ program
 
     console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
     console.log("");
+  });
+
+program
+  .command("stats")
+  .description("Show login statistics")
+  .option("-d, --domain <domain>", "Filter by domain")
+  .action((options: { domain?: string }) => {
+    console.log("");
+    console.log(`${colors.cyan}${colors.bold}Login Statistics${colors.reset}`);
+    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
+    console.log("");
+
+    const stats = loginHistory.getStats(options.domain);
+
+    if (stats.totalAttempts === 0) {
+      console.log(`${colors.dim}No login attempts recorded yet.${colors.reset}`);
+      console.log("");
+      console.log(`Use ${colors.cyan}start_login_session${colors.reset} and ${colors.cyan}end_login_session${colors.reset} in Claude Code`);
+      console.log(`to track your login flows.`);
+      console.log("");
+      return;
+    }
+
+    console.log(`${colors.bold}Overall:${colors.reset}`);
+    console.log(`   Total attempts: ${colors.cyan}${stats.totalAttempts}${colors.reset}`);
+    console.log(`   Successful: ${colors.green}${stats.successCount}${colors.reset}`);
+    console.log(`   Failed: ${colors.red}${stats.failedCount}${colors.reset}`);
+    console.log(`   Success rate: ${stats.successRate >= 0.8 ? colors.green : stats.successRate >= 0.5 ? colors.yellow : colors.red}${Math.round(stats.successRate * 100)}%${colors.reset}`);
+    console.log("");
+
+    if (Object.keys(stats.byDomain).length > 0) {
+      console.log(`${colors.bold}By Domain:${colors.reset}`);
+      const sortedDomains = Object.entries(stats.byDomain)
+        .sort((a, b) => b[1].total - a[1].total);
+
+      for (const [domain, data] of sortedDomains) {
+        const rateColor = data.rate >= 0.8 ? colors.green : data.rate >= 0.5 ? colors.yellow : colors.red;
+        console.log(`   ${domain}: ${data.success}/${data.total} (${rateColor}${Math.round(data.rate * 100)}%${colors.reset})`);
+      }
+      console.log("");
+    }
+
+    if (Object.keys(stats.twoFactorBreakdown).length > 0) {
+      console.log(`${colors.bold}2FA Methods:${colors.reset}`);
+      for (const [type, count] of Object.entries(stats.twoFactorBreakdown)) {
+        const icon = type === "totp" ? "🔐" : type === "sms" ? "📱" : type === "email" ? "📧" : "❌";
+        console.log(`   ${icon} ${type}: ${count}`);
+      }
+      console.log("");
+    }
+
+    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
+    console.log("");
+  });
+
+program
+  .command("history")
+  .description("Show recent login history")
+  .option("-n, --limit <number>", "Number of entries to show", "10")
+  .option("-d, --domain <domain>", "Filter by domain")
+  .action((options: { limit: string; domain?: string }) => {
+    console.log("");
+    console.log(`${colors.cyan}${colors.bold}Login History${colors.reset}`);
+    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
+    console.log("");
+
+    const limit = parseInt(options.limit, 10) || 10;
+    const recent = loginHistory.getRecent(limit, options.domain);
+
+    if (recent.length === 0) {
+      console.log(`${colors.dim}No login attempts recorded yet.${colors.reset}`);
+      console.log("");
+      return;
+    }
+
+    for (const attempt of recent) {
+      const outcomeIcon = attempt.outcome === "success" ? `${colors.green}✓${colors.reset}` :
+                          attempt.outcome === "failed" ? `${colors.red}✗${colors.reset}` :
+                          attempt.outcome === "in_progress" ? `${colors.yellow}⏳${colors.reset}` :
+                          `${colors.dim}?${colors.reset}`;
+
+      const duration = attempt.completedAt
+        ? `${Math.round((new Date(attempt.completedAt).getTime() - new Date(attempt.startedAt).getTime()) / 1000)}s`
+        : "in progress";
+
+      const time = new Date(attempt.startedAt).toLocaleString();
+
+      console.log(`${outcomeIcon} ${colors.bold}${attempt.domain}${colors.reset}`);
+      console.log(`   ${colors.dim}Account:${colors.reset} ${attempt.accountUsed || "unknown"}`);
+      console.log(`   ${colors.dim}2FA:${colors.reset} ${attempt.twoFactorType || "none"}`);
+      console.log(`   ${colors.dim}Duration:${colors.reset} ${duration}`);
+      console.log(`   ${colors.dim}Time:${colors.reset} ${time}`);
+
+      if (attempt.browserSteps && attempt.browserSteps.length > 0) {
+        console.log(`   ${colors.dim}Browser steps:${colors.reset} ${attempt.browserSteps.length}`);
+        for (const step of attempt.browserSteps.slice(0, 5)) {
+          const stepDesc = step.action === "fill_field" ? `fill ${step.field}` :
+                          step.action === "click_button" ? `click "${step.text}"` :
+                          step.action === "navigate" ? `navigate to ${step.url}` :
+                          step.action === "wait" ? `wait ${step.seconds}s` : step.action;
+          console.log(`      → ${stepDesc}`);
+        }
+        if (attempt.browserSteps && attempt.browserSteps.length > 5) {
+          console.log(`      ${colors.dim}... and ${attempt.browserSteps.length - 5} more${colors.reset}`);
+        }
+      }
+
+      if (attempt.error) {
+        console.log(`   ${colors.red}Error:${colors.reset} ${attempt.error}`);
+      }
+      console.log("");
+    }
+
+    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
+    console.log("");
+  });
+
+program
+  .command("patterns")
+  .description("Show learned login patterns")
+  .action(() => {
+    console.log("");
+    console.log(`${colors.cyan}${colors.bold}Learned Login Patterns${colors.reset}`);
+    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
+    console.log("");
+
+    const patterns = patternStore.getAllPatterns();
+
+    if (patterns.length === 0) {
+      console.log(`${colors.dim}No patterns learned yet.${colors.reset}`);
+      console.log("");
+      console.log(`Patterns are saved when you complete a login with ${colors.cyan}end_login_session${colors.reset}`);
+      console.log(`and include the browser steps you took.`);
+      console.log("");
+      return;
+    }
+
+    for (const pattern of patterns) {
+      const total = pattern.successCount + pattern.failureCount;
+      const rate = total > 0 ? pattern.successCount / total : 0;
+      const rateColor = rate >= 0.8 ? colors.green : rate >= 0.5 ? colors.yellow : colors.red;
+
+      console.log(`${colors.bold}${pattern.domain}${colors.reset}`);
+      console.log(`   ${colors.dim}Success rate:${colors.reset} ${rateColor}${Math.round(rate * 100)}%${colors.reset} (${pattern.successCount}/${total})`);
+      console.log(`   ${colors.dim}2FA:${colors.reset} ${pattern.twoFactorType || "none"}`);
+      console.log(`   ${colors.dim}Last used:${colors.reset} ${new Date(pattern.lastUpdated).toLocaleString()}`);
+
+      if (pattern.browserSteps.length > 0) {
+        console.log(`   ${colors.dim}Steps:${colors.reset}`);
+        for (const step of pattern.browserSteps) {
+          const stepDesc = step.action === "fill_field" ? `fill ${step.field}` :
+                          step.action === "click_button" ? `click "${step.text}"` :
+                          step.action === "navigate" ? `navigate` :
+                          step.action === "wait" ? `wait ${step.seconds}s` : step.action;
+          console.log(`      → ${stepDesc}`);
+        }
+      }
+      console.log("");
+    }
+
+    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
+    console.log("");
+  });
+
+program
+  .command("clear-history")
+  .description("Clear all login history")
+  .action(async () => {
+    console.log("");
+
+    const stats = loginHistory.getStats();
+    if (stats.totalAttempts === 0) {
+      console.log(`${colors.dim}No history to clear.${colors.reset}`);
+      console.log("");
+      return;
+    }
+
+    console.log(`${colors.yellow}This will delete ${stats.totalAttempts} login attempt(s).${colors.reset}`);
+
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const answer = await new Promise<string>((resolve) => {
+      rl.question("Are you sure? (y/N): ", resolve);
+    });
+    rl.close();
+
+    if (answer.toLowerCase() !== "y") {
+      console.log("Cancelled.");
+      return;
+    }
+
+    loginHistory.clearHistory();
+    console.log(`${colors.green}✓ History cleared.${colors.reset}`);
+    console.log("");
+  });
+
+program
+  .command("clear-patterns")
+  .description("Clear all learned patterns")
+  .action(async () => {
+    console.log("");
+
+    const patterns = patternStore.getAllPatterns();
+    if (patterns.length === 0) {
+      console.log(`${colors.dim}No patterns to clear.${colors.reset}`);
+      console.log("");
+      return;
+    }
+
+    console.log(`${colors.yellow}This will delete ${patterns.length} learned pattern(s).${colors.reset}`);
+
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const answer = await new Promise<string>((resolve) => {
+      rl.question("Are you sure? (y/N): ", resolve);
+    });
+    rl.close();
+
+    if (answer.toLowerCase() !== "y") {
+      console.log("Cancelled.");
+      return;
+    }
+
+    patternStore.clearPatterns();
+    console.log(`${colors.green}✓ Patterns cleared.${colors.reset}`);
+    console.log("");
+  });
+
+program
+  .command("dashboard")
+  .description("Start the VaultRunner web dashboard")
+  .option("-p, --port <number>", "Port to run on", "19877")
+  .action(async (options: { port: string }) => {
+    const port = parseInt(options.port, 10) || 19877;
+
+    console.log("");
+    console.log(`${colors.cyan}${colors.bold}Starting VaultRunner Dashboard${colors.reset}`);
+    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
+    console.log("");
+
+    try {
+      await startDashboard(port);
+      console.log(`${colors.green}✓${colors.reset} Dashboard running at ${colors.cyan}http://localhost:${port}${colors.reset}`);
+      console.log("");
+      console.log(`${colors.dim}Press Ctrl+C to stop${colors.reset}`);
+      console.log("");
+
+      // Open in browser
+      await open(`http://localhost:${port}`);
+    } catch (error) {
+      const err = error as Error & { code?: string };
+      if (err.code === "EADDRINUSE") {
+        console.log(`${colors.red}✗${colors.reset} Port ${port} is already in use.`);
+        console.log(`  Try: ${colors.cyan}vaultrunner dashboard --port 8080${colors.reset}`);
+      } else {
+        console.log(`${colors.red}✗${colors.reset} Failed to start dashboard: ${err.message}`);
+      }
+      process.exit(1);
+    }
   });
 
 program.parse();

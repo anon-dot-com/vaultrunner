@@ -2,6 +2,7 @@ import { z } from "zod";
 import { onePasswordCLI } from "../onepassword/cli.js";
 import { logger } from "../utils/logger.js";
 import { accountPreferences } from "../preferences/account-preferences.js";
+import { loginHistory } from "../history/login-history.js";
 
 export const listLoginsTool = {
   name: "list_logins",
@@ -64,6 +65,12 @@ export const listLoginsTool = {
     // Determine if user needs to choose
     const hasDefault = loginsWithDefault.some(l => l.isDefault);
     const needsUserChoice = logins.length > 1 && !hasDefault;
+
+    // Auto-log if session is active
+    const session = loginHistory.getCurrentSession();
+    if (session) {
+      loginHistory.logToolStep("list_logins", { domain, count: logins.length }, "success");
+    }
 
     return {
       content: [

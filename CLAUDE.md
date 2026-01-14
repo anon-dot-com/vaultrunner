@@ -16,6 +16,10 @@ VaultRunner is an MCP server that provides 1Password credentials to Claude. Clau
 | `set_account_preference` | Remember default account for a domain |
 | `get_account_preference` | Get saved default account |
 | `clear_account_preference` | Clear saved preference |
+| `start_login_session` | Start tracking a login attempt (returns known patterns) |
+| `end_login_session` | End session with browser steps for learning |
+| `get_login_pattern` | Get stored pattern for a domain |
+| `get_login_stats` | View login history and statistics |
 
 ## Login Flow (using Claude for Chrome)
 
@@ -94,6 +98,72 @@ When a domain has multiple accounts, VaultRunner can remember the user's preferr
 # Next time:
 1. get_account_preference(domain) returns saved item_id
 2. Use that account automatically
+```
+
+## Session Tracking (Learning)
+
+VaultRunner can learn login patterns to help with future logins. Wrap login flows with session tracking:
+
+### With Session Tracking
+
+```
+User: "Log me into GitHub"
+
+1. start_login_session("github.com")
+   → Returns known pattern if exists, otherwise hints to provide steps
+2. list_logins("github.com") → Auto-logged
+3. get_credentials(item_id) → Auto-logged
+4. [Claude for Chrome: fill username, click Next, fill password, click Sign in]
+5. get_totp(item_id) → Auto-logged (if needed)
+6. [Claude for Chrome: fill 2FA code, click Verify]
+7. end_login_session({
+     success: true,
+     steps: [
+       { action: "fill_field", field: "username" },
+       { action: "click_button", text: "Sign in" },
+       { action: "fill_field", field: "password" },
+       { action: "click_button", text: "Sign in" },
+       { action: "fill_field", field: "2fa_code" },
+       { action: "click_button", text: "Verify" }
+     ]
+   })
+   → Pattern saved for github.com
+```
+
+### Using Saved Patterns
+
+Before starting a login, check for existing patterns:
+
+```
+get_login_pattern("github.com")
+→ Returns: {
+    found: true,
+    success_rate: 100%,
+    pattern: {
+      browser_steps: [...],
+      two_factor_type: "totp"
+    },
+    hint: "Multi-step flow: username first, then password on next page"
+  }
+```
+
+### Browser Step Types
+
+| Action | Fields | Example |
+|--------|--------|---------|
+| `fill_field` | `field` | `{ action: "fill_field", field: "username" }` |
+| `click_button` | `text` | `{ action: "click_button", text: "Sign in" }` |
+| `wait` | `seconds` | `{ action: "wait", seconds: 2 }` |
+| `navigate` | `url` | `{ action: "navigate", url: "https://..." }` |
+
+### CLI Commands
+
+```bash
+vaultrunner stats           # View login statistics
+vaultrunner history         # View recent login attempts
+vaultrunner patterns        # View learned patterns
+vaultrunner clear-history   # Clear login history
+vaultrunner clear-patterns  # Clear learned patterns
 ```
 
 ## Troubleshooting
