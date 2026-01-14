@@ -28,12 +28,12 @@ const CODE_PATTERNS: Array<{ pattern: RegExp; confidence: "high" | "medium" | "l
   { pattern: /use\s*(\d{4,8})\s*(?:to|as|for)/i, confidence: "high", name: "use X to" },
 
   // Medium confidence - common patterns without explicit "code" mention
-  { pattern: /(\d{6})\s*[-–]\s*\w+/i, confidence: "medium", name: "6-digit with suffix" },
+  { pattern: /(\d{6,8})\s*[-–]\s*\w+/i, confidence: "medium", name: "6-8 digit with suffix" },
   { pattern: /enter[:\s]+(\d{4,8})/i, confidence: "medium", name: "enter X" },
   { pattern: /confirm[:\s]+(\d{4,8})/i, confidence: "medium", name: "confirm X" },
 
-  // Low confidence - standalone digit sequences (only 6 digits, most common for 2FA)
-  { pattern: /\b(\d{6})\b/, confidence: "low", name: "standalone 6-digit" },
+  // Low confidence - standalone digit sequences (6-8 digits, common for 2FA)
+  { pattern: /\b(\d{6,8})\b/, confidence: "low", name: "standalone 6-8 digit" },
 ];
 
 /**
