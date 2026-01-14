@@ -128,53 +128,17 @@ npx vaultrunner clear-patterns  # Clear learned patterns
 
 ### Gmail 2FA Setup
 
-We're working on a public Gmail app for easier setup. For now, you'll need to create your own OAuth credentials via the Gmail API.
+We're working on a public Gmail app for easier setup. For now, you'll need to create your own OAuth credentials:
 
-**Step 1: Create a Google Cloud Project**
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project (or select an existing one)
-3. Enable the Gmail API:
-   - Go to **APIs & Services** > **Library**
-   - Search for "Gmail API" and click **Enable**
-
-**Step 2: Configure OAuth Consent Screen**
-
-1. Go to **APIs & Services** > **OAuth consent screen**
-2. Select **External** user type (or Internal if using Google Workspace)
-3. Fill in the required fields:
-   - App name: "VaultRunner" (or any name)
-   - User support email: Your email
-   - Developer contact: Your email
-4. Click **Save and Continue**
-5. On Scopes page, click **Add or Remove Scopes**
-6. Add the scope: `https://www.googleapis.com/auth/gmail.readonly`
-7. Save and continue through the remaining steps
-
-**Step 3: Create OAuth Credentials**
-
-1. Go to **APIs & Services** > **Credentials**
+1. Go to [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials)
 2. Click **Create Credentials** > **OAuth client ID**
-3. Select **Desktop app** as the application type
-4. Name it "VaultRunner" (or any name)
-5. Click **Create**
-6. Copy the **Client ID** and **Client Secret**
-
-**Step 4: Connect Gmail to VaultRunner**
-
-```bash
-npx vaultrunner setup-gmail
-```
-
-When prompted, paste your Client ID and Client Secret. A browser window will open for you to authorize access to your Gmail account.
-
-**Step 5: Verify Setup**
-
-```bash
-npx vaultrunner test-2fa
-```
-
-This will confirm Gmail is connected and test reading recent verification codes.
+3. Select **Desktop app** as application type, then **Create**
+4. Copy the **Client ID** and **Client Secret**
+5. Run setup and paste your credentials when prompted:
+   ```bash
+   npx vaultrunner setup-gmail
+   ```
+6. Verify with `npx vaultrunner test-2fa`
 
 ## Security
 
