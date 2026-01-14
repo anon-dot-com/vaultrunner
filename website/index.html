@@ -643,7 +643,7 @@
         <a href="#security">Security</a>
         <a href="/support.html">Support</a>
         <a href="https://github.com/anon-dot-com/vaultrunner" target="_blank">GitHub</a>
-        <a href="https://chromewebstore.google.com/detail/vaultrunner" class="btn btn-primary">Get Extension</a>
+        <a href="https://github.com/anon-dot-com/vaultrunner#quick-start" class="btn btn-primary">Get Started</a>
       </div>
     </div>
   </nav>
@@ -664,13 +664,13 @@
           Your passwords flow from 1Password to the browser—Claude never sees them.
         </p>
         <div class="hero-buttons">
-          <a href="https://chromewebstore.google.com/detail/vaultrunner" class="btn btn-primary">
+          <a href="#install" class="btn btn-primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="7 10 12 15 17 10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            Install Extension
+            Get Started
           </a>
           <a href="https://github.com/anon-dot-com/vaultrunner" class="btn btn-secondary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -750,7 +750,7 @@
           </div>
           <div style="text-align: center;">
             <div class="flow-note">
-              <code>Credentials bypass Claude entirely. You get: { success: true }</code>
+              <code>VaultRunner provides credentials via MCP. Claude for Chrome fills forms.</code>
             </div>
           </div>
         </div>
@@ -841,9 +841,9 @@
         <div class="install-steps">
           <div class="install-step">
             <div class="install-number">1</div>
-            <h3>Install Extension</h3>
-            <p>Add VaultRunner to Chrome from the Web Store.</p>
-            <a href="https://chromewebstore.google.com/detail/vaultrunner" class="btn btn-secondary" style="margin-top: 8px;">Chrome Web Store</a>
+            <h3>Prerequisites</h3>
+            <p>Install 1Password CLI and Claude for Chrome.</p>
+            <code>brew install --cask 1password-cli</code>
           </div>
 
           <div class="install-step">
@@ -857,7 +857,7 @@
             <div class="install-number">3</div>
             <h3>Add to Claude Code</h3>
             <p>Add VaultRunner to your MCP config.</p>
-            <code>~/.claude/claude_desktop_config.json</code>
+            <code>~/.claude.json</code>
           </div>
         </div>
 
@@ -866,7 +866,7 @@
             <span class="code-dot red"></span>
             <span class="code-dot yellow"></span>
             <span class="code-dot green"></span>
-            <span class="code-title">claude_desktop_config.json</span>
+            <span class="code-title">~/.claude.json</span>
           </div>
           <div class="code-block">
 <pre>{
@@ -916,8 +916,8 @@
               </svg>
             </div>
             <div>
-              <h4>Credentials bypass Claude</h4>
-              <p>1Password → Extension → DOM. Claude only receives success/failure confirmation.</p>
+              <h4>Local credential handling</h4>
+              <p>1Password → VaultRunner → Claude for Chrome → Browser. All local, no external servers.</p>
             </div>
           </div>
 
@@ -966,19 +966,18 @@
             <span class="code-title">What Claude sees</span>
           </div>
           <div class="code-block">
-<pre><span class="comment">// Claude's view of a login:</span>
+<pre><span class="comment">// VaultRunner provides credentials via MCP:</span>
 {
-  <span class="key">"action"</span>: <span class="string">"fill_credentials"</span>,
+  <span class="key">"tool"</span>: <span class="string">"get_credentials"</span>,
   <span class="key">"result"</span>: {
-    <span class="key">"success"</span>: <span class="string">true</span>,
-    <span class="key">"filledFields"</span>: [<span class="string">"username"</span>, <span class="string">"password"</span>]
+    <span class="key">"username"</span>: <span class="string">"user@example.com"</span>,
+    <span class="key">"password"</span>: <span class="string">"••••••••••••"</span>
   }
 }
 
-<span class="comment">// What Claude does NOT see:</span>
-<span class="comment">// - Your actual password</span>
-<span class="comment">// - Your TOTP secrets</span>
-<span class="comment">// - Your email verification codes</span></pre>
+<span class="comment">// Claude for Chrome fills the form</span>
+<span class="comment">// Your credentials stay local to your machine</span>
+<span class="comment">// Nothing is sent to external servers</span></pre>
           </div>
         </div>
       </div>
