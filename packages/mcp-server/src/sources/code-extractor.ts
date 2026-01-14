@@ -19,6 +19,8 @@ const CODE_PATTERNS: Array<{ pattern: RegExp; confidence: "high" | "medium" | "l
   // High confidence - explicit code mentions
   { pattern: /(?:verification|verify|security)\s*code[:\s]+(\d{4,8})/i, confidence: "high", name: "verification code" },
   { pattern: /(?:your|the)\s*code\s*(?:is)?[:\s]+(\d{4,8})/i, confidence: "high", name: "your code is" },
+  { pattern: /OTP\s*code\s*(?:is)?[:\s]+(\d{4,8})/i, confidence: "high", name: "OTP code is" },
+  { pattern: /code\s+is[:\s]+(\d{4,8})/i, confidence: "high", name: "code is" },
   { pattern: /code[:\s]+(\d{4,8})/i, confidence: "high", name: "code:" },
   { pattern: /OTP[:\s]+(\d{4,8})/i, confidence: "high", name: "OTP" },
   { pattern: /one.?time\s*(?:password|code|pin)[:\s]+(\d{4,8})/i, confidence: "high", name: "one-time password" },
