@@ -11,9 +11,12 @@ import { homedir, platform } from "os";
 import { execSync } from "child_process";
 import open from "open";
 import { createInterface } from "readline";
-import { setupGmail, disconnectGmail, readConfig } from "../sources/gmail-oauth.js";
+import { setupGmail, disconnectGmail } from "../sources/gmail-oauth.js";
 import { isMessagesConfigured, checkMessagesAccess } from "../sources/messages-reader.js";
 import { getGmailStatus } from "../sources/gmail-reader.js";
+import { loginHistory } from "../history/login-history.js";
+import { patternStore } from "../history/pattern-store.js";
+import { startDashboard } from "../dashboard/server.js";
 
 const program = new Command();
 
@@ -44,11 +47,8 @@ ${colors.magenta}
  ██╔══██╗██║   ██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗
  ██║  ██║╚██████╔╝██║ ╚████║██║ ╚████║███████╗██║  ██║
  ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝
-${colors.reset}${colors.dim}  Secure credential automation for AI agents${colors.reset}
+${colors.reset}${colors.dim}  1Password credentials for Claude browser automation${colors.reset}
 `;
-
-// Extension Web Store URL (update after publishing)
-const EXTENSION_WEBSTORE_URL = "https://chromewebstore.google.com/detail/vaultrunner/EXTENSION_ID_HERE";
 
 /**
  * Find the repo root by looking for package.json with name "vaultrunner"
@@ -120,8 +120,8 @@ async function install1PasswordCLI(): Promise<boolean> {
 
 program
   .name("vaultrunner")
-  .description("Secure credential automation for AI agents")
-  .version("0.1.0");
+  .description("1Password credentials for Claude browser automation")
+  .version("0.3.0");
 
 program
   .command("setup")
@@ -177,16 +177,10 @@ program
     }
     console.log("");
 
-    // Guide to install Chrome extension
-    console.log(`${colors.bold}3. VaultRunner Chrome Extension${colors.reset}`);
-    console.log(`   ${colors.yellow}○${colors.reset} Install from Chrome Web Store:`);
-    console.log(`   ${colors.cyan}${EXTENSION_WEBSTORE_URL}${colors.reset}`);
-    console.log("");
-
-    // Guide to install Claude extension
-    console.log(`${colors.bold}4. Claude Chrome Extension${colors.reset}`);
+    // Guide to install Claude for Chrome extension
+    console.log(`${colors.bold}3. Claude for Chrome Extension${colors.reset}`);
     console.log(`   ${colors.dim}Required for browser automation${colors.reset}`);
-    console.log(`   ${colors.cyan}https://chromewebstore.google.com/detail/claude/fcoeoabgfenejglbffodgkkbkcdhcgfn${colors.reset}`);
+    console.log(`   ${colors.cyan}https://chromewebstore.google.com/detail/claude/danfoofmcgmjopflpidnpkdlphdngjgo${colors.reset}`);
     console.log("");
 
     // Summary
@@ -195,9 +189,8 @@ program
       console.log(`${colors.green}${colors.bold}✓ Setup complete!${colors.reset}`);
       console.log("");
       console.log(`${colors.bold}Next steps:${colors.reset}`);
-      console.log(`   1. Install the VaultRunner Chrome extension`);
-      console.log(`   2. Install the Claude Chrome extension if you haven't`);
-      console.log(`   3. Add VaultRunner MCP to Claude Code (see below)`);
+      console.log(`   1. Install the Claude for Chrome extension if you haven't`);
+      console.log(`   2. Add VaultRunner MCP to Claude Code (see below)`);
       console.log("");
 
       // Show MCP configuration instructions
@@ -209,38 +202,8 @@ program
       console.log("");
       console.log(`   Or use ${colors.cyan}/mcp${colors.reset} in Claude Code and add manually.`);
       console.log("");
-      console.log(`   4. Restart Claude Code to load VaultRunner MCP`);
+      console.log(`   3. Restart Claude Code to load VaultRunner MCP`);
       console.log("");
-
-      // Auto-start the dashboard
-      console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
-      console.log("");
-      console.log(`${colors.bold}Starting VaultRunner Dashboard...${colors.reset}`);
-      console.log("");
-
-      try {
-        const dashboardPort = 19877;
-        const { startDashboard } = await import("../dashboard/server.js");
-        await startDashboard(dashboardPort);
-        console.log(`${colors.green}✓${colors.reset} Dashboard running at ${colors.cyan}http://localhost:${dashboardPort}${colors.reset}`);
-        console.log("");
-        console.log(`   The dashboard shows login history, learned patterns, and system status.`);
-        console.log(`   ${colors.dim}Press Ctrl+C to stop${colors.reset}`);
-        console.log("");
-
-        // Open dashboard in browser
-        await open(`http://localhost:${dashboardPort}`);
-      } catch (err) {
-        const error = err as Error & { code?: string };
-        if (error.code === "EADDRINUSE") {
-          console.log(`${colors.yellow}○${colors.reset} Dashboard already running at ${colors.cyan}http://localhost:19877${colors.reset}`);
-          await open("http://localhost:19877");
-        } else {
-          console.log(`${colors.yellow}○${colors.reset} Could not start dashboard: ${error.message}`);
-          console.log(`   ${colors.dim}Run manually: vaultrunner dashboard${colors.reset}`);
-        }
-        console.log("");
-      }
     } else {
       console.log(`${colors.yellow}${colors.bold}! Some requirements need attention${colors.reset}`);
       console.log(`   Please install the missing components above.`);
@@ -273,12 +236,6 @@ program
     } else {
       console.log(`   ${colors.red}✗${colors.reset} Not installed ${colors.dim}(run: vaultrunner setup)${colors.reset}`);
     }
-    console.log("");
-
-    // Note about extension
-    console.log(`${colors.bold}Chrome Extension:${colors.reset}`);
-    console.log(`   ${colors.dim}Extension status is shown in the MCP tools${colors.reset}`);
-    console.log(`   ${colors.dim}Use get_vault_status tool to check connection${colors.reset}`);
     console.log("");
 
     // 2FA Sources
@@ -580,98 +537,51 @@ program
   });
 
 program
-  .command("dashboard")
-  .description("Start the VaultRunner dashboard web UI")
-  .option("-p, --port <port>", "Port to run the dashboard on", "19877")
-  .action(async (options) => {
-    const port = parseInt(options.port);
-
-    console.log("");
-    console.log(`${colors.cyan}${colors.bold}VaultRunner Dashboard${colors.reset}`);
-    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
-    console.log("");
-
-    try {
-      const { startDashboard } = await import("../dashboard/server.js");
-      await startDashboard(port);
-      console.log("");
-      console.log(`${colors.green}✓${colors.reset} Dashboard running at ${colors.cyan}http://localhost:${port}${colors.reset}`);
-      console.log("");
-      console.log(`${colors.dim}Press Ctrl+C to stop${colors.reset}`);
-
-      // Open in browser
-      const openModule = await import("open");
-      await openModule.default(`http://localhost:${port}`);
-    } catch (err) {
-      const error = err as Error & { code?: string };
-      if (error.code === "EADDRINUSE") {
-        console.log(`${colors.red}✗${colors.reset} Port ${port} is already in use.`);
-        console.log(`   ${colors.dim}Try a different port: vaultrunner dashboard --port 19878${colors.reset}`);
-      } else {
-        console.log(`${colors.red}✗${colors.reset} Failed to start dashboard: ${error.message}`);
-      }
-      process.exit(1);
-    }
-  });
-
-program
   .command("stats")
-  .description("Show login statistics and learned patterns")
-  .action(async () => {
-    // Dynamic imports to avoid loading everything at startup
-    const { loginHistory } = await import("../learning/login-history.js");
-    const { ruleEngine } = await import("../learning/rule-engine.js");
-
+  .description("Show login statistics")
+  .option("-d, --domain <domain>", "Filter by domain")
+  .action((options: { domain?: string }) => {
     console.log("");
-    console.log(`${colors.cyan}${colors.bold}VaultRunner Learning Statistics${colors.reset}`);
+    console.log(`${colors.cyan}${colors.bold}Login Statistics${colors.reset}`);
     console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
     console.log("");
 
-    const stats = loginHistory.getStats();
-    console.log(`${colors.bold}Login Attempts:${colors.reset}`);
-    console.log(`   Total: ${colors.cyan}${stats.totalAttempts}${colors.reset}`);
-    console.log(`   Success Rate: ${colors.cyan}${(stats.successRate * 100).toFixed(1)}%${colors.reset}`);
-    console.log(`   Unique Sites: ${colors.cyan}${stats.uniqueDomains}${colors.reset}`);
-    console.log(`   Most Common Flow: ${colors.cyan}${stats.mostCommonFlowType}${colors.reset}`);
+    const stats = loginHistory.getStats(options.domain);
+
+    if (stats.totalAttempts === 0) {
+      console.log(`${colors.dim}No login attempts recorded yet.${colors.reset}`);
+      console.log("");
+      console.log(`Use ${colors.cyan}start_login_session${colors.reset} and ${colors.cyan}end_login_session${colors.reset} in Claude Code`);
+      console.log(`to track your login flows.`);
+      console.log("");
+      return;
+    }
+
+    console.log(`${colors.bold}Overall:${colors.reset}`);
+    console.log(`   Total attempts: ${colors.cyan}${stats.totalAttempts}${colors.reset}`);
+    console.log(`   Successful: ${colors.green}${stats.successCount}${colors.reset}`);
+    console.log(`   Failed: ${colors.red}${stats.failedCount}${colors.reset}`);
+    console.log(`   Success rate: ${stats.successRate >= 0.8 ? colors.green : stats.successRate >= 0.5 ? colors.yellow : colors.red}${Math.round(stats.successRate * 100)}%${colors.reset}`);
     console.log("");
 
-    const rules = ruleEngine.getAllRules();
-    const siteCount = Object.keys(rules.sites).length;
-    const localRules = Object.values(rules.sites).filter((r) => r.learnedFrom === "local").length;
-    const bundledRules = Object.values(rules.sites).filter((r) => r.learnedFrom === "bundled").length;
-    const communityRules = Object.values(rules.sites).filter((r) => r.learnedFrom === "community").length;
+    if (Object.keys(stats.byDomain).length > 0) {
+      console.log(`${colors.bold}By Domain:${colors.reset}`);
+      const sortedDomains = Object.entries(stats.byDomain)
+        .sort((a, b) => b[1].total - a[1].total);
 
-    console.log(`${colors.bold}Learned Rules:${colors.reset}`);
-    console.log(`   Total Sites: ${colors.cyan}${siteCount}${colors.reset}`);
-    console.log(`   Bundled: ${colors.cyan}${bundledRules}${colors.reset}`);
-    console.log(`   Locally Learned: ${colors.cyan}${localRules}${colors.reset}`);
-    console.log(`   From Community: ${colors.cyan}${communityRules}${colors.reset}`);
-    console.log("");
-
-    // Show recent attempts
-    const history = loginHistory.getHistory();
-    const recent = history.attempts.slice(0, 5);
-    if (recent.length > 0) {
-      console.log(`${colors.bold}Recent Login Attempts:${colors.reset}`);
-      for (const attempt of recent) {
-        const status =
-          attempt.outcome === "success"
-            ? `${colors.green}✓${colors.reset}`
-            : attempt.outcome === "failed"
-            ? `${colors.red}✗${colors.reset}`
-            : `${colors.yellow}○${colors.reset}`;
-        const time = new Date(attempt.startedAt).toLocaleString();
-        console.log(`   ${status} ${colors.bold}${attempt.domain}${colors.reset} - ${colors.dim}${time}${colors.reset}`);
+      for (const [domain, data] of sortedDomains) {
+        const rateColor = data.rate >= 0.8 ? colors.green : data.rate >= 0.5 ? colors.yellow : colors.red;
+        console.log(`   ${domain}: ${data.success}/${data.total} (${rateColor}${Math.round(data.rate * 100)}%${colors.reset})`);
       }
       console.log("");
     }
 
-    // Show contributable rules
-    const contributable = ruleEngine.getContributableRules();
-    if (contributable.length > 0) {
-      console.log(`${colors.bold}Ready to Contribute:${colors.reset}`);
-      console.log(`   ${colors.green}${contributable.length}${colors.reset} rules are ready to share with the community!`);
-      console.log(`   ${colors.dim}Run: vaultrunner contribute-rules${colors.reset}`);
+    if (Object.keys(stats.twoFactorBreakdown).length > 0) {
+      console.log(`${colors.bold}2FA Methods:${colors.reset}`);
+      for (const [type, count] of Object.entries(stats.twoFactorBreakdown)) {
+        const icon = type === "totp" ? "🔐" : type === "sms" ? "📱" : type === "email" ? "📧" : "❌";
+        console.log(`   ${icon} ${type}: ${count}`);
+      }
       console.log("");
     }
 
@@ -680,146 +590,132 @@ program
   });
 
 program
-  .command("contribute-rules")
-  .description("Contribute your learned login patterns to the community")
-  .action(async () => {
-    const { ruleEngine } = await import("../learning/rule-engine.js");
-    const { loginHistory } = await import("../learning/login-history.js");
-    const { execSync } = await import("child_process");
-    const { writeFileSync, existsSync, mkdirSync } = await import("fs");
-    const { join } = await import("path");
-    const { tmpdir } = await import("os");
-
+  .command("history")
+  .description("Show recent login history")
+  .option("-n, --limit <number>", "Number of entries to show", "10")
+  .option("-d, --domain <domain>", "Filter by domain")
+  .action((options: { limit: string; domain?: string }) => {
     console.log("");
-    console.log(`${colors.cyan}${colors.bold}Contribute Login Rules${colors.reset}`);
+    console.log(`${colors.cyan}${colors.bold}Login History${colors.reset}`);
     console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
     console.log("");
 
-    const contributable = ruleEngine.getContributableRules();
+    const limit = parseInt(options.limit, 10) || 10;
+    const recent = loginHistory.getRecent(limit, options.domain);
 
-    if (contributable.length === 0) {
-      console.log(`${colors.yellow}No rules are ready for contribution yet.${colors.reset}`);
-      console.log("");
-      console.log(`Rules become contributable when:`);
-      console.log(`   • They have at least 3 successful logins`);
-      console.log(`   • They have at least 80% success rate`);
-      console.log("");
-      console.log(`Keep using VaultRunner to build up your learned patterns!`);
+    if (recent.length === 0) {
+      console.log(`${colors.dim}No login attempts recorded yet.${colors.reset}`);
       console.log("");
       return;
     }
 
-    console.log(`${colors.green}Found ${contributable.length} rules ready to contribute:${colors.reset}`);
-    console.log("");
+    for (const attempt of recent) {
+      const outcomeIcon = attempt.outcome === "success" ? `${colors.green}✓${colors.reset}` :
+                          attempt.outcome === "failed" ? `${colors.red}✗${colors.reset}` :
+                          attempt.outcome === "in_progress" ? `${colors.yellow}⏳${colors.reset}` :
+                          `${colors.dim}?${colors.reset}`;
 
-    for (const rule of contributable) {
-      console.log(`   ${colors.bold}${rule.domain}${colors.reset}`);
-      console.log(`      Flow: ${rule.flowType}, Steps: ${rule.steps.length}`);
-      console.log(`      Success: ${rule.successCount}/${rule.successCount + rule.failureCount} (${(rule.confidence * 100).toFixed(0)}%)`);
-      console.log(`      2FA: ${rule.twoFactorSource || "none"}`);
+      const duration = attempt.completedAt
+        ? `${Math.round((new Date(attempt.completedAt).getTime() - new Date(attempt.startedAt).getTime()) / 1000)}s`
+        : "in progress";
+
+      const time = new Date(attempt.startedAt).toLocaleString();
+
+      console.log(`${outcomeIcon} ${colors.bold}${attempt.domain}${colors.reset}`);
+      console.log(`   ${colors.dim}Account:${colors.reset} ${attempt.accountUsed || "unknown"}`);
+      console.log(`   ${colors.dim}2FA:${colors.reset} ${attempt.twoFactorType || "none"}`);
+      console.log(`   ${colors.dim}Duration:${colors.reset} ${duration}`);
+      console.log(`   ${colors.dim}Time:${colors.reset} ${time}`);
+
+      if (attempt.browserSteps && attempt.browserSteps.length > 0) {
+        console.log(`   ${colors.dim}Browser steps:${colors.reset} ${attempt.browserSteps.length}`);
+        for (const step of attempt.browserSteps.slice(0, 5)) {
+          const stepDesc = step.action === "fill_field" ? `fill ${step.field}` :
+                          step.action === "click_button" ? `click "${step.text}"` :
+                          step.action === "navigate" ? `navigate to ${step.url}` :
+                          step.action === "wait" ? `wait ${step.seconds}s` : step.action;
+          console.log(`      → ${stepDesc}`);
+        }
+        if (attempt.browserSteps && attempt.browserSteps.length > 5) {
+          console.log(`      ${colors.dim}... and ${attempt.browserSteps.length - 5} more${colors.reset}`);
+        }
+      }
+
+      if (attempt.error) {
+        console.log(`   ${colors.red}Error:${colors.reset} ${attempt.error}`);
+      }
       console.log("");
     }
 
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
-    const answer = await new Promise<string>((resolve) => {
-      rl.question(`${colors.bold}Create a GitHub PR with these rules? (y/N):${colors.reset} `, resolve);
-    });
-    rl.close();
+    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
+    console.log("");
+  });
 
-    if (answer.toLowerCase() !== "y") {
-      console.log("Cancelled.");
+program
+  .command("patterns")
+  .description("Show learned login patterns")
+  .action(() => {
+    console.log("");
+    console.log(`${colors.cyan}${colors.bold}Learned Login Patterns${colors.reset}`);
+    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
+    console.log("");
+
+    const patterns = patternStore.getAllPatterns();
+
+    if (patterns.length === 0) {
+      console.log(`${colors.dim}No patterns learned yet.${colors.reset}`);
+      console.log("");
+      console.log(`Patterns are saved when you complete a login with ${colors.cyan}end_login_session${colors.reset}`);
+      console.log(`and include the browser steps you took.`);
+      console.log("");
       return;
     }
 
-    console.log("");
-    console.log(`${colors.dim}Preparing contribution...${colors.reset}`);
+    for (const pattern of patterns) {
+      const total = pattern.successCount + pattern.failureCount;
+      const rate = total > 0 ? pattern.successCount / total : 0;
+      const rateColor = rate >= 0.8 ? colors.green : rate >= 0.5 ? colors.yellow : colors.red;
 
-    // Generate the rules JSON
-    const rulesForPR: Record<string, unknown> = {};
-    for (const rule of contributable) {
-      rulesForPR[rule.domain] = {
-        name: rule.name || rule.domain,
-        loginUrl: rule.loginUrl,
-        flowType: rule.flowType,
-        steps: rule.steps.map((s) => ({
-          action: s.action,
-          nextButton: s.buttonText,
-        })),
-        twoFactorSource: rule.twoFactorSource,
-        twoFactorSender: rule.twoFactorSender,
-        notes: `Learned from ${rule.successCount} successful logins`,
-      };
-    }
+      console.log(`${colors.bold}${pattern.domain}${colors.reset}`);
+      console.log(`   ${colors.dim}Success rate:${colors.reset} ${rateColor}${Math.round(rate * 100)}%${colors.reset} (${pattern.successCount}/${total})`);
+      console.log(`   ${colors.dim}2FA:${colors.reset} ${pattern.twoFactorType || "none"}`);
+      console.log(`   ${colors.dim}Last used:${colors.reset} ${new Date(pattern.lastUpdated).toLocaleString()}`);
 
-    // Create a temporary file with the rules
-    const tempDir = join(tmpdir(), "vaultrunner-contribution");
-    if (!existsSync(tempDir)) {
-      mkdirSync(tempDir, { recursive: true });
-    }
-
-    const contributionFile = join(tempDir, "contributed-rules.json");
-    writeFileSync(
-      contributionFile,
-      JSON.stringify(
-        {
-          version: "1.0",
-          contributedAt: new Date().toISOString(),
-          sites: rulesForPR,
-        },
-        null,
-        2
-      )
-    );
-
-    console.log(`${colors.green}✓${colors.reset} Rules saved to: ${colors.dim}${contributionFile}${colors.reset}`);
-    console.log("");
-
-    // Check if gh CLI is installed
-    let hasGhCli = false;
-    try {
-      execSync("which gh", { stdio: "pipe" });
-      hasGhCli = true;
-    } catch {
-      hasGhCli = false;
-    }
-
-    if (hasGhCli) {
-      console.log(`${colors.bold}GitHub CLI detected!${colors.reset}`);
+      if (pattern.browserSteps.length > 0) {
+        console.log(`   ${colors.dim}Steps:${colors.reset}`);
+        for (const step of pattern.browserSteps) {
+          const stepDesc = step.action === "fill_field" ? `fill ${step.field}` :
+                          step.action === "click_button" ? `click "${step.text}"` :
+                          step.action === "navigate" ? `navigate` :
+                          step.action === "wait" ? `wait ${step.seconds}s` : step.action;
+          console.log(`      → ${stepDesc}`);
+        }
+      }
       console.log("");
-      console.log(`To create a PR, you can:`);
-      console.log(`1. Fork the VaultRunner repo: ${colors.cyan}https://github.com/anthropics/vaultrunner${colors.reset}`);
-      console.log(`2. Copy the rules to ${colors.cyan}packages/mcp-server/src/rules/site-rules.json${colors.reset}`);
-      console.log(`3. Create a PR with: ${colors.cyan}gh pr create${colors.reset}`);
-    } else {
-      console.log(`${colors.bold}To contribute:${colors.reset}`);
-      console.log(`1. Go to: ${colors.cyan}https://github.com/anthropics/vaultrunner${colors.reset}`);
-      console.log(`2. Fork the repository`);
-      console.log(`3. Edit ${colors.cyan}packages/mcp-server/src/rules/site-rules.json${colors.reset}`);
-      console.log(`4. Add the rules from: ${colors.dim}${contributionFile}${colors.reset}`);
-      console.log(`5. Create a Pull Request`);
     }
 
-    console.log("");
-    console.log(`${colors.cyan}Thank you for contributing to VaultRunner! ${colors.reset}`);
+    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
     console.log("");
   });
 
 program
   .command("clear-history")
-  .description("Clear all login history (keeps learned rules)")
+  .description("Clear all login history")
   .action(async () => {
-    const { loginHistory } = await import("../learning/login-history.js");
+    console.log("");
 
-    console.log("");
-    console.log(`${colors.yellow}${colors.bold}Clear Login History${colors.reset}`);
-    console.log("");
-    console.log(`This will delete all login attempt history.`);
-    console.log(`${colors.dim}Note: Learned rules will be preserved.${colors.reset}`);
-    console.log("");
+    const stats = loginHistory.getStats();
+    if (stats.totalAttempts === 0) {
+      console.log(`${colors.dim}No history to clear.${colors.reset}`);
+      console.log("");
+      return;
+    }
+
+    console.log(`${colors.yellow}This will delete ${stats.totalAttempts} login attempt(s).${colors.reset}`);
 
     const rl = createInterface({ input: process.stdin, output: process.stdout });
     const answer = await new Promise<string>((resolve) => {
-      rl.question(`${colors.bold}Are you sure? (y/N):${colors.reset} `, resolve);
+      rl.question("Are you sure? (y/N): ", resolve);
     });
     rl.close();
 
@@ -829,8 +725,72 @@ program
     }
 
     loginHistory.clearHistory();
-    console.log(`${colors.green}✓${colors.reset} Login history cleared.`);
+    console.log(`${colors.green}✓ History cleared.${colors.reset}`);
     console.log("");
+  });
+
+program
+  .command("clear-patterns")
+  .description("Clear all learned patterns")
+  .action(async () => {
+    console.log("");
+
+    const patterns = patternStore.getAllPatterns();
+    if (patterns.length === 0) {
+      console.log(`${colors.dim}No patterns to clear.${colors.reset}`);
+      console.log("");
+      return;
+    }
+
+    console.log(`${colors.yellow}This will delete ${patterns.length} learned pattern(s).${colors.reset}`);
+
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const answer = await new Promise<string>((resolve) => {
+      rl.question("Are you sure? (y/N): ", resolve);
+    });
+    rl.close();
+
+    if (answer.toLowerCase() !== "y") {
+      console.log("Cancelled.");
+      return;
+    }
+
+    patternStore.clearPatterns();
+    console.log(`${colors.green}✓ Patterns cleared.${colors.reset}`);
+    console.log("");
+  });
+
+program
+  .command("dashboard")
+  .description("Start the VaultRunner web dashboard")
+  .option("-p, --port <number>", "Port to run on", "19877")
+  .action(async (options: { port: string }) => {
+    const port = parseInt(options.port, 10) || 19877;
+
+    console.log("");
+    console.log(`${colors.cyan}${colors.bold}Starting VaultRunner Dashboard${colors.reset}`);
+    console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
+    console.log("");
+
+    try {
+      await startDashboard(port);
+      console.log(`${colors.green}✓${colors.reset} Dashboard running at ${colors.cyan}http://localhost:${port}${colors.reset}`);
+      console.log("");
+      console.log(`${colors.dim}Press Ctrl+C to stop${colors.reset}`);
+      console.log("");
+
+      // Open in browser
+      await open(`http://localhost:${port}`);
+    } catch (error) {
+      const err = error as Error & { code?: string };
+      if (err.code === "EADDRINUSE") {
+        console.log(`${colors.red}✗${colors.reset} Port ${port} is already in use.`);
+        console.log(`  Try: ${colors.cyan}vaultrunner dashboard --port 8080${colors.reset}`);
+      } else {
+        console.log(`${colors.red}✗${colors.reset} Failed to start dashboard: ${err.message}`);
+      }
+      process.exit(1);
+    }
   });
 
 program.parse();

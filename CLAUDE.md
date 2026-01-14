@@ -1,110 +1,177 @@
 # VaultRunner - Claude Code Guidelines
 
-## Login Flow Best Practices
+## Overview
 
-### General Rules
+VaultRunner is an MCP server that provides 1Password credentials to Claude. Claude uses the Claude for Chrome extension for browser automation (filling forms, clicking buttons).
 
-1. **Multi-step login flows**: Many sites split login into username → password → 2FA steps. After filling each field, look for a "Next", "Continue", or "Submit" button before proceeding.
+## Available Tools
 
-2. **Avoid social login buttons**: Always prefer standard email/password login over OAuth buttons (Google, Apple, Facebook, Microsoft, GitHub, LinkedIn, Twitter). Use `click_button` with `exclude_texts` parameter if needed.
+| Tool | Description |
+|------|-------------|
+| `get_vault_status` | Check if 1Password CLI is authenticated |
+| `list_logins` | List accounts for a domain (returns usernames, not passwords) |
+| `get_credentials` | Get username and password for an item ID |
+| `get_totp` | Get TOTP code from 1Password |
+| `get_2fa_code` | Read verification codes from SMS (Messages) or email (Gmail) |
+| `set_account_preference` | Remember default account for a domain |
+| `get_account_preference` | Get saved default account |
+| `clear_account_preference` | Clear saved preference |
+| `start_login_session` | Start tracking a login attempt (returns known patterns) |
+| `end_login_session` | End session with browser steps for learning |
+| `get_login_pattern` | Get stored pattern for a domain |
+| `get_login_stats` | View login history and statistics |
 
-3. **2FA code sources**: Check `get_2fa_code` for SMS/email codes BEFORE trying `fill_totp` with a 1Password item_id. Many accounts use SMS-based 2FA rather than TOTP.
+## Login Flow (using Claude for Chrome)
 
-4. **Button click order of preference**:
-   - "Next" / "Continue" (for multi-step flows)
-   - "Log in" / "Sign in" (for final submission)
-   - Avoid: Social login buttons, "Create account", "Sign up"
+### Standard Flow
 
-5. **Wait between steps**: Allow 2-3 seconds after clicking buttons for page transitions.
+1. `list_logins(domain)` → Get available accounts
+2. `get_credentials(item_id)` → Get username/password
+3. Use Claude for Chrome to fill username field
+4. Use Claude for Chrome to click "Next" if multi-step
+5. Use Claude for Chrome to fill password field
+6. Use Claude for Chrome to click "Log in" / "Sign in"
+7. If 2FA required:
+   a. `get_2fa_code()` → Check SMS/email first
+   b. Or `get_totp(item_id)` → Get from 1Password
+   c. Use Claude for Chrome to fill code and submit
 
-6. **Field detection**: If `fill_credentials` reports missing fields, the page may not have loaded fully or may be showing a different step. Wait and retry.
+### Example Sequence
 
-### Site-Specific Rules
+```
+User: "Log me into X.com"
 
-#### X.com (Twitter)
+1. list_logins("x.com") → Returns accounts with item IDs
+2. If multiple accounts, ask user which one (or use saved preference)
+3. get_credentials(item_id) → Returns { username, password }
+4. Navigate to https://x.com/i/flow/login (if not already there)
+5. Fill username field with the returned username
+6. Click "Next" button
+7. Wait for password field to appear
+8. Fill password field with the returned password
+9. Click "Log in" button
+10. If 2FA prompt appears:
+    - get_2fa_code(sender="40404") → Check SMS for X.com codes
+    - If found, fill the code field
+    - Click "Next" or "Verify"
+11. Login complete
+```
+
+## Site-Specific Notes
+
+### X.com (Twitter)
 - **Login URL**: `https://x.com/i/flow/login`
 - **Flow**: Username → Next → Password → Log in → SMS 2FA → Next
-- **2FA**: SMS from shortcode `40404`, message format: "X authentication code: XXXXXX"
-- **Buttons**: Use "Next" after username, "Log in" after password, "Next" after 2FA code
-- **Notes**: Has Google/Apple OAuth buttons - avoid these
+- **2FA**: SMS from shortcode `40404`, format: "X authentication code: XXXXXX"
+- **Buttons**: Use "Next" after username, "Log in" after password
 
-#### Webflow
-- **Login URL**: `https://webflow.com/dashboard/login`
-- **Flow**: Email + Password on same page → Log in → (2FA if enabled)
-- **Notes**: Single-page login form
-
-#### Google
+### Google
 - **Login URL**: `https://accounts.google.com`
 - **Flow**: Email → Next → Password → Next → (2FA)
-- **2FA**: May use Google Authenticator TOTP, SMS, or Google prompts
-- **Notes**: Multi-step flow similar to X.com
+- **Notes**: Multi-step flow, may have TOTP or Google prompts
 
-### Recommended Login Sequence
+### General Tips
+- **Avoid social login buttons**: Prefer standard email/password login over OAuth (Google, Apple, Facebook, etc.)
+- **Multi-step flows**: Many sites split login into username → password → 2FA steps
+- **Wait between steps**: Allow 2-3 seconds after clicking for page transitions
+- **Button text varies**: Look for "Next", "Continue", "Log in", "Sign in", "Submit"
 
-```
-1. list_logins(domain) → get credentials
-2. fill_credentials(item_id) → fills available fields
-3. If only username filled:
-   a. click_button("Next") or click_button("Continue")
-   b. wait 2 seconds
-   c. fill_credentials(item_id) → fill password
-4. click_button("Log in") or click_submit()
-5. wait 3 seconds
-6. If 2FA required:
-   a. get_2fa_code(sender) → check SMS/email first
-   b. If found: fill_totp(code=<code>)
-   c. If not found: fill_totp(item_id) → try 1Password TOTP
-   d. click_button("Next") or click_submit()
-```
+## 2FA Sources
 
-### Troubleshooting
+Check `get_2fa_code` for SMS/email codes BEFORE trying `get_totp`. Many accounts use SMS-based 2FA rather than TOTP.
 
-- **1Password overlay blocking**: VaultRunner tools work through content scripts and bypass overlay issues. Use VaultRunner tools instead of browser automation for credential filling.
-- **"Cannot access chrome-extension://"**: This error means 1Password's overlay is active. VaultRunner fill_credentials/click_button still work.
-- **Field not found**: Page may be in wrong state. Check what step you're on and use appropriate button clicks.
+| Source | Usage |
+|--------|-------|
+| SMS (Messages) | `get_2fa_code(source="messages")` - Reads macOS Messages database |
+| Gmail | `get_2fa_code(source="gmail")` - Searches recent emails |
+| 1Password TOTP | `get_totp(item_id)` - Gets authenticator code from vault |
 
-## Learning System
+## Account Preferences
 
-VaultRunner learns from every login attempt and improves over time.
-
-### How It Works
-
-1. **Local Learning**: Every login attempt is logged with steps and outcomes
-2. **Rule Refinement**: Successful patterns are extracted and stored as rules
-3. **Community Sharing**: Users can contribute their learned rules via GitHub PRs
-4. **Distribution**: Community rules are bundled in npm updates
-
-### Using smart_login
-
-For the best experience, use the `smart_login` tool which:
-- Looks up existing rules for the domain
-- Executes the optimal login flow automatically
-- Handles multi-step flows and 2FA
-- Logs the attempt and learns from the outcome
+When a domain has multiple accounts, VaultRunner can remember the user's preferred choice:
 
 ```
-smart_login(domain="x.com", item_id="...")
+# If list_logins returns multiple accounts and no default is set:
+1. Ask user which account to use
+2. set_account_preference(domain, item_id) to remember choice
+
+# Next time:
+1. get_account_preference(domain) returns saved item_id
+2. Use that account automatically
 ```
 
-### Checking Stats
+## Session Tracking (Learning)
 
-Use `login_stats` to see:
-- Success rates and learned patterns
-- Rules ready for contribution
-- Recent login history
+VaultRunner can learn login patterns to help with future logins. Wrap login flows with session tracking:
 
-### Contributing Rules
+### With Session Tracking
 
-After 3+ successful logins to a site, your learned rules become eligible for contribution:
+```
+User: "Log me into GitHub"
 
-```bash
-vaultrunner contribute-rules
+1. start_login_session("github.com")
+   → Returns known pattern if exists, otherwise hints to provide steps
+2. list_logins("github.com") → Auto-logged
+3. get_credentials(item_id) → Auto-logged
+4. [Claude for Chrome: fill username, click Next, fill password, click Sign in]
+5. get_totp(item_id) → Auto-logged (if needed)
+6. [Claude for Chrome: fill 2FA code, click Verify]
+7. end_login_session({
+     success: true,
+     steps: [
+       { action: "fill_field", field: "username" },
+       { action: "click_button", text: "Sign in" },
+       { action: "fill_field", field: "password" },
+       { action: "click_button", text: "Sign in" },
+       { action: "fill_field", field: "2fa_code" },
+       { action: "click_button", text: "Verify" }
+     ]
+   })
+   → Pattern saved for github.com
 ```
 
-This packages your patterns and guides you through creating a GitHub PR.
+### Using Saved Patterns
+
+Before starting a login, check for existing patterns:
+
+```
+get_login_pattern("github.com")
+→ Returns: {
+    found: true,
+    success_rate: 100%,
+    pattern: {
+      browser_steps: [...],
+      two_factor_type: "totp"
+    },
+    hint: "Multi-step flow: username first, then password on next page"
+  }
+```
+
+### Browser Step Types
+
+| Action | Fields | Example |
+|--------|--------|---------|
+| `fill_field` | `field` | `{ action: "fill_field", field: "username" }` |
+| `click_button` | `text` | `{ action: "click_button", text: "Sign in" }` |
+| `wait` | `seconds` | `{ action: "wait", seconds: 2 }` |
+| `navigate` | `url` | `{ action: "navigate", url: "https://..." }` |
 
 ### CLI Commands
 
-- `vaultrunner stats` - View login statistics
-- `vaultrunner contribute-rules` - Share learned patterns
-- `vaultrunner clear-history` - Clear login history (keeps rules)
+```bash
+vaultrunner stats           # View login statistics
+vaultrunner history         # View recent login attempts
+vaultrunner patterns        # View learned patterns
+vaultrunner clear-history   # Clear login history
+vaultrunner clear-patterns  # Clear learned patterns
+```
+
+## Troubleshooting
+
+### "Vault not authenticated"
+- User needs to unlock 1Password (biometrics or `op signin`)
+
+### 2FA code not found
+- SMS: User needs Full Disk Access for Messages (`vaultrunner setup-messages`)
+- Gmail: User needs to connect Gmail (`vaultrunner setup-gmail`)
+- TOTP: Item may not have TOTP configured in 1Password

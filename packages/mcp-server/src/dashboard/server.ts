@@ -1,3 +1,8 @@
+/**
+ * VaultRunner Dashboard Server
+ * Web dashboard for viewing login history and patterns
+ */
+
 import express, { Request, Response } from "express";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -8,12 +13,64 @@ import * as path from "path";
 // File paths for direct reading (to get fresh data on each request)
 const VAULTRUNNER_DIR = path.join(os.homedir(), ".vaultrunner");
 const HISTORY_FILE = path.join(VAULTRUNNER_DIR, "login-history.json");
-const RULES_FILE = path.join(VAULTRUNNER_DIR, "learned-rules.json");
+const PATTERNS_FILE = path.join(VAULTRUNNER_DIR, "login-patterns.json");
+
+interface BrowserStep {
+  action: "fill_field" | "click_button" | "wait" | "navigate";
+  field?: string;
+  text?: string;
+  url?: string;
+  seconds?: number;
+}
+
+interface ToolStep {
+  tool: string;
+  timestamp: string;
+  params: Record<string, unknown>;
+  result: "success" | "failed";
+}
+
+interface LoginAttempt {
+  id: string;
+  domain: string;
+  loginUrl?: string;
+  startedAt: string;
+  completedAt?: string;
+  outcome: "success" | "failed" | "abandoned" | "in_progress";
+  toolSteps: ToolStep[];
+  browserSteps: BrowserStep[];
+  accountUsed?: string;
+  twoFactorType?: "totp" | "sms" | "email" | "none";
+  error?: string;
+}
+
+interface LoginHistory {
+  version: string;
+  lastUpdated: string;
+  attempts: LoginAttempt[];
+}
+
+interface LoginPattern {
+  domain: string;
+  loginUrl?: string;
+  lastUpdated: string;
+  successCount: number;
+  failureCount: number;
+  browserSteps: BrowserStep[];
+  twoFactorType?: string;
+  notes?: string;
+}
+
+interface PatternStore {
+  version: string;
+  lastUpdated: string;
+  patterns: Record<string, LoginPattern>;
+}
 
 /**
  * Read login history directly from disk (fresh data on each request)
  */
-function readHistoryFromDisk() {
+function readHistoryFromDisk(): LoginHistory {
   try {
     if (fs.existsSync(HISTORY_FILE)) {
       const data = fs.readFileSync(HISTORY_FILE, "utf-8");
@@ -23,70 +80,71 @@ function readHistoryFromDisk() {
     console.error("Failed to read login history:", error);
   }
   return {
-    version: "1.0",
+    version: "2.0",
     lastUpdated: new Date().toISOString(),
     attempts: [],
   };
 }
 
 /**
- * Read learned rules directly from disk (fresh data on each request)
+ * Read patterns directly from disk (fresh data on each request)
  */
-function readRulesFromDisk() {
+function readPatternsFromDisk(): PatternStore {
   try {
-    if (fs.existsSync(RULES_FILE)) {
-      const data = fs.readFileSync(RULES_FILE, "utf-8");
+    if (fs.existsSync(PATTERNS_FILE)) {
+      const data = fs.readFileSync(PATTERNS_FILE, "utf-8");
       return JSON.parse(data);
     }
   } catch (error) {
-    console.error("Failed to read learned rules:", error);
+    console.error("Failed to read patterns:", error);
   }
   return {
     version: "1.0",
     lastUpdated: new Date().toISOString(),
-    generalRules: {
-      socialLoginKeywords: ["google", "apple", "facebook", "twitter", "microsoft", "github", "linkedin"],
-      waitBetweenSteps: 2000,
-      waitAfterSubmit: 3000,
-    },
-    sites: {},
+    patterns: {},
   };
 }
 
 /**
  * Calculate stats from history
  */
-function calculateStats(history: { attempts: any[] }) {
-  const completed = history.attempts.filter((a: any) => a.outcome !== "in_progress");
-  const successful = completed.filter((a: any) => a.outcome === "success");
-  const domains = new Set(history.attempts.map((a: any) => a.domain));
-  const flowTypes = completed.map((a: any) => a.flowType).filter(Boolean);
-  const flowCounts = flowTypes.reduce((acc: Record<string, number>, ft: string) => {
-    acc[ft] = (acc[ft] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+function calculateStats(history: LoginHistory) {
+  const completed = history.attempts.filter((a) => a.outcome !== "in_progress");
+  const successful = completed.filter((a) => a.outcome === "success");
+  const failed = completed.filter((a) => a.outcome === "failed");
+  const domains = new Set(history.attempts.map((a) => a.domain));
+
+  // 2FA breakdown
+  const twoFactorCounts: Record<string, number> = {};
+  for (const attempt of completed) {
+    const type = attempt.twoFactorType || "none";
+    twoFactorCounts[type] = (twoFactorCounts[type] || 0) + 1;
+  }
+
+  // Per-domain stats
+  const byDomain: Record<string, { total: number; success: number; rate: number }> = {};
+  for (const attempt of completed) {
+    if (!byDomain[attempt.domain]) {
+      byDomain[attempt.domain] = { total: 0, success: 0, rate: 0 };
+    }
+    byDomain[attempt.domain].total++;
+    if (attempt.outcome === "success") {
+      byDomain[attempt.domain].success++;
+    }
+  }
+  for (const d of Object.keys(byDomain)) {
+    byDomain[d].rate = byDomain[d].total > 0 ? byDomain[d].success / byDomain[d].total : 0;
+  }
 
   return {
     totalAttempts: completed.length,
+    successCount: successful.length,
+    failedCount: failed.length,
     successRate: completed.length > 0 ? successful.length / completed.length : 0,
     uniqueDomains: domains.size,
-    mostCommonFlowType: Object.entries(flowCounts).sort((a, b) => (b[1] as number) - (a[1] as number))[0]?.[0] || "unknown",
+    twoFactorBreakdown: twoFactorCounts,
+    byDomain,
   };
-}
-
-/**
- * Get contributable rules (rules with enough successful logins)
- */
-function getContributableRules(rules: { sites: Record<string, any> }) {
-  return Object.entries(rules.sites)
-    .filter(([_, rule]) => {
-      return (
-        rule.learnedFrom === "local" &&
-        rule.successCount >= 3 &&
-        rule.confidence >= 0.8
-      );
-    })
-    .map(([domain, rule]) => ({ domain, ...rule }));
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -102,69 +160,63 @@ export function startDashboard(port: number = DEFAULT_PORT): Promise<void> {
     app.use(express.static(join(__dirname, "public")));
     app.use(express.json());
 
-    // API: Get overall stats (reads fresh from disk)
+    // API: Get overall stats
     app.get("/api/stats", (_req: Request, res: Response) => {
       const history = readHistoryFromDisk();
-      const rules = readRulesFromDisk();
+      const patterns = readPatternsFromDisk();
       const stats = calculateStats(history);
-      const siteCount = Object.keys(rules.sites).length;
-      const localRules = Object.values(rules.sites).filter((r: any) => r.learnedFrom === "local").length;
-      const bundledRules = Object.values(rules.sites).filter((r: any) => r.learnedFrom === "bundled").length;
-      const communityRules = Object.values(rules.sites).filter((r: any) => r.learnedFrom === "community").length;
-      const contributable = getContributableRules(rules);
+      const patternCount = Object.keys(patterns.patterns).length;
 
       res.json({
         attempts: {
           total: stats.totalAttempts,
+          success: stats.successCount,
+          failed: stats.failedCount,
           successRate: stats.successRate,
           uniqueSites: stats.uniqueDomains,
-          mostCommonFlow: stats.mostCommonFlowType,
         },
-        rules: {
-          total: siteCount,
-          bundled: bundledRules,
-          local: localRules,
-          community: communityRules,
-          contributable: contributable.length,
+        patterns: {
+          total: patternCount,
         },
+        twoFactor: stats.twoFactorBreakdown,
+        byDomain: stats.byDomain,
       });
     });
 
-    // API: Get login history (reads fresh from disk)
+    // API: Get login history
     app.get("/api/history", (req: Request, res: Response) => {
       const limit = parseInt(req.query.limit as string) || 50;
       const domain = req.query.domain as string;
 
       const history = readHistoryFromDisk();
-      let attempts = history.attempts;
+      let attempts = [...history.attempts].reverse(); // Most recent first
 
       if (domain) {
-        attempts = attempts.filter((a: any) => a.domain.includes(domain));
+        attempts = attempts.filter((a) => a.domain.includes(domain));
       }
 
       res.json({
-        attempts: attempts.slice(0, limit).map((a: any) => ({
+        attempts: attempts.slice(0, limit).map((a) => ({
           id: a.id,
           domain: a.domain,
           loginUrl: a.loginUrl,
           outcome: a.outcome,
           startedAt: a.startedAt,
           completedAt: a.completedAt,
-          stepCount: a.steps?.length || 0,
-          flowType: a.flowType,
-          twoFactorSource: a.twoFactorSource,
-          errorMessage: a.errorMessage,
-          username: a.username,
-          itemTitle: a.itemTitle,
+          toolStepCount: a.toolSteps?.length || 0,
+          browserStepCount: a.browserSteps?.length || 0,
+          twoFactorType: a.twoFactorType,
+          accountUsed: a.accountUsed,
+          error: a.error,
         })),
         total: attempts.length,
       });
     });
 
-    // API: Get single attempt details (reads fresh from disk)
+    // API: Get single attempt details
     app.get("/api/history/:id", (req: Request, res: Response) => {
       const history = readHistoryFromDisk();
-      const attempt = history.attempts.find((a: any) => a.id === req.params.id);
+      const attempt = history.attempts.find((a) => a.id === req.params.id);
 
       if (!attempt) {
         res.status(404).json({ error: "Attempt not found" });
@@ -174,87 +226,47 @@ export function startDashboard(port: number = DEFAULT_PORT): Promise<void> {
       res.json(attempt);
     });
 
-    // API: Get all rules (reads fresh from disk)
-    app.get("/api/rules", (_req: Request, res: Response) => {
-      const rules = readRulesFromDisk();
+    // API: Get all patterns
+    app.get("/api/patterns", (_req: Request, res: Response) => {
+      const patterns = readPatternsFromDisk();
 
-      const siteRules = Object.entries(rules.sites).map(([domain, rule]: [string, any]) => ({
+      const patternList = Object.entries(patterns.patterns).map(([domain, p]) => ({
         domain,
-        name: rule.name,
-        loginUrl: rule.loginUrl,
-        flowType: rule.flowType,
-        steps: rule.steps || [], // Include full step details
-        stepCount: rule.steps?.length || 0,
-        twoFactorSource: rule.twoFactorSource,
-        twoFactorSender: rule.twoFactorSender,
-        confidence: rule.confidence,
-        learnedFrom: rule.learnedFrom,
-        successCount: rule.successCount,
-        failureCount: rule.failureCount,
-        lastUpdated: rule.lastUpdated,
-        // Adaptive learning fields
-        learningNotes: rule.learningNotes || [],
-        adaptations: rule.adaptations || [],
-        consecutiveFailures: rule.consecutiveFailures || 0,
-        lastFailureReason: rule.lastFailureReason,
-        alternativeButtonTexts: rule.alternativeButtonTexts || [],
+        loginUrl: p.loginUrl,
+        successCount: p.successCount,
+        failureCount: p.failureCount,
+        successRate: (p.successCount + p.failureCount) > 0
+          ? p.successCount / (p.successCount + p.failureCount)
+          : 0,
+        twoFactorType: p.twoFactorType,
+        browserStepCount: p.browserSteps?.length || 0,
+        browserSteps: p.browserSteps || [],
+        lastUpdated: p.lastUpdated,
       }));
 
       res.json({
-        generalRules: rules.generalRules,
-        sites: siteRules,
+        patterns: patternList,
+        total: patternList.length,
       });
     });
 
-    // API: Get single rule details (reads fresh from disk)
-    app.get("/api/rules/:domain", (req: Request, res: Response) => {
-      const rules = readRulesFromDisk();
-      const rule = rules.sites[req.params.domain];
+    // API: Get single pattern details
+    app.get("/api/patterns/:domain", (req: Request, res: Response) => {
+      const patterns = readPatternsFromDisk();
+      const pattern = patterns.patterns[req.params.domain];
 
-      if (!rule) {
-        res.status(404).json({ error: "Rule not found" });
+      if (!pattern) {
+        res.status(404).json({ error: "Pattern not found" });
         return;
       }
 
-      res.json({ domain: req.params.domain, ...rule });
+      res.json(pattern);
     });
 
-    // API: Get contributable rules (reads fresh from disk)
-    app.get("/api/contributable", (_req: Request, res: Response) => {
-      const rules = readRulesFromDisk();
-      const contributable = getContributableRules(rules);
-
-      res.json({
-        count: contributable.length,
-        rules: contributable.map((r: any) => ({
-          domain: r.domain,
-          confidence: r.confidence,
-          successCount: r.successCount,
-          flowType: r.flowType,
-          twoFactorSource: r.twoFactorSource,
-        })),
-      });
-    });
-
-    // API: Export patterns for contribution (reads fresh from disk)
-    app.get("/api/export", (_req: Request, res: Response) => {
-      const history = readHistoryFromDisk();
-      // Simple export - just return successful patterns
-      const patterns = history.attempts
-        .filter((a: any) => a.outcome === "success")
-        .map((a: any) => ({
-          domain: a.domain,
-          loginUrl: a.loginUrl,
-          flowType: a.flowType,
-          steps: a.steps,
-        }));
-      res.json({ patterns });
-    });
-
-    // API: Clear history (writes to disk)
+    // API: Clear history
     app.post("/api/history/clear", (_req: Request, res: Response) => {
-      const emptyHistory = {
-        version: "1.0",
+      const emptyHistory: LoginHistory = {
+        version: "2.0",
         lastUpdated: new Date().toISOString(),
         attempts: [],
       };
@@ -266,78 +278,39 @@ export function startDashboard(port: number = DEFAULT_PORT): Promise<void> {
       }
     });
 
-    // API: Get active sessions (reads fresh from disk)
-    app.get("/api/sessions", (_req: Request, res: Response) => {
-      const history = readHistoryFromDisk();
-      const sessionsByDomain = new Map<string, any>();
-
-      // Get most recent successful login for each domain
-      for (const attempt of history.attempts) {
-        if (attempt.outcome === "success" && !sessionsByDomain.has(attempt.domain)) {
-          sessionsByDomain.set(attempt.domain, attempt);
-        }
+    // API: Clear patterns
+    app.post("/api/patterns/clear", (_req: Request, res: Response) => {
+      const emptyPatterns: PatternStore = {
+        version: "1.0",
+        lastUpdated: new Date().toISOString(),
+        patterns: {},
+      };
+      try {
+        fs.writeFileSync(PATTERNS_FILE, JSON.stringify(emptyPatterns, null, 2));
+        res.json({ success: true, message: "Patterns cleared" });
+      } catch (error) {
+        res.status(500).json({ success: false, error: "Failed to clear patterns" });
       }
-
-      const sessions = Array.from(sessionsByDomain.values()).map((attempt: any) => {
-        const assistedBy: string[] = [];
-        for (const step of (attempt.steps || [])) {
-          if (step.result === "success" || step.result === "partial") {
-            if (step.action === "fill_credentials") {
-              assistedBy.push("Credentials");
-            } else if (step.action === "fill_totp" || step.action === "get_2fa_code") {
-              assistedBy.push("2FA Code");
-            } else if (step.action === "click_button") {
-              assistedBy.push("Navigation");
-            }
-          }
-        }
-        return {
-          domain: attempt.domain,
-          loginUrl: attempt.loginUrl,
-          username: attempt.username,
-          itemTitle: attempt.itemTitle,
-          loggedInAt: attempt.completedAt || attempt.startedAt,
-          assistedBy: [...new Set(assistedBy)],
-          twoFactorUsed: attempt.twoFactorSource !== "none" && attempt.twoFactorSource !== undefined,
-          attemptId: attempt.id,
-        };
-      });
-
-      res.json({
-        count: sessions.length,
-        sessions,
-      });
     });
 
-    // API: Raw data dump for debugging (reads fresh from disk)
+    // API: Debug data dump
     app.get("/api/debug/raw", (_req: Request, res: Response) => {
       const history = readHistoryFromDisk();
-      const rules = readRulesFromDisk();
+      const patterns = readPatternsFromDisk();
 
       res.json({
         timestamp: new Date().toISOString(),
-        loginHistory: {
-          version: history.version,
-          lastUpdated: history.lastUpdated,
-          totalAttempts: history.attempts.length,
-          attempts: history.attempts, // Full raw attempts with all steps
-        },
-        rules: {
-          version: rules.version,
-          lastUpdated: rules.lastUpdated,
-          generalRules: rules.generalRules,
-          sites: rules.sites, // Full raw site rules
-        },
-        currentAttempt: null, // Can't track in-progress from separate process
+        loginHistory: history,
+        patterns: patterns,
         paths: {
           historyFile: HISTORY_FILE,
-          rulesFile: RULES_FILE,
+          patternsFile: PATTERNS_FILE,
         },
       });
     });
 
     // Serve index.html for all other routes (SPA)
-    app.get("/{*path}", (_req: Request, res: Response) => {
+    app.get("/*", (_req: Request, res: Response) => {
       res.sendFile(join(__dirname, "public", "index.html"));
     });
 

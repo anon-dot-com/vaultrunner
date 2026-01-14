@@ -4,10 +4,9 @@
  */
 
 import { z } from "zod";
-import { logger } from "../utils/logger.js";
 import { isMessagesConfigured, searchMessagesForCode } from "../sources/messages-reader.js";
 import { searchGmailForCode, getGmailStatus } from "../sources/gmail-reader.js";
-import { loginHistory } from "../learning/login-history.js";
+import { loginHistory } from "../history/login-history.js";
 
 export const get2faCodeTool = {
   name: "get_2fa_code",
@@ -25,9 +24,6 @@ export const get2faCodeTool = {
   }) => {
     const { sender, max_age_seconds = 300, source = "all" } = input;
 
-    logger.banner();
-    logger.action("2FA Code", "Searching for verification codes");
-
     // Determine which sources are configured
     const messagesConfigured = isMessagesConfigured();
     const gmailStatus = getGmailStatus();
@@ -37,10 +33,7 @@ export const get2faCodeTool = {
     if (messagesConfigured) configuredSources.push("messages");
     if (gmailConfigured) configuredSources.push("gmail");
 
-    logger.step(`Configured sources: ${configuredSources.length > 0 ? configuredSources.join(", ") : "none"}`);
-
     if (configuredSources.length === 0) {
-      logger.actionEnd(false, "No 2FA sources configured");
       return {
         content: [{
           type: "text" as const,
@@ -57,21 +50,13 @@ export const get2faCodeTool = {
 
     // Search Messages first (faster, local)
     if ((source === "all" || source === "messages") && messagesConfigured) {
-      logger.step("Searching Messages (SMS/iMessage)...");
       const messagesResult = searchMessagesForCode(searchOptions);
 
       if (messagesResult.found && messagesResult.code) {
-        logger.actionEnd(true, `Found code ${messagesResult.code} from Messages`);
-
-        // Auto-log to active session if one exists
-        const activeSession = loginHistory.getCurrentAttempt();
-        if (activeSession) {
-          loginHistory.logStep(
-            "get_2fa_code",
-            "success",
-            { source: "messages", sender: messagesResult.sender },
-            `Found code from ${messagesResult.sender || "Messages"}`
-          );
+        // Auto-log if session is active
+        const session = loginHistory.getCurrentSession();
+        if (session) {
+          loginHistory.logToolStep("get_2fa_code", { source: "messages", sender: messagesResult.sender }, "success");
         }
 
         return {
@@ -90,31 +75,17 @@ export const get2faCodeTool = {
           }],
         };
       }
-
-      if (messagesResult.error) {
-        logger.step(`Messages error: ${messagesResult.error}`);
-      } else {
-        logger.step("No code found in Messages");
-      }
     }
 
     // Search Gmail
     if ((source === "all" || source === "gmail") && gmailConfigured) {
-      logger.step(`Searching Gmail (${gmailStatus.email})...`);
       const gmailResult = await searchGmailForCode(searchOptions);
 
       if (gmailResult.found && gmailResult.code) {
-        logger.actionEnd(true, `Found code ${gmailResult.code} from Gmail`);
-
-        // Auto-log to active session if one exists
-        const activeSession = loginHistory.getCurrentAttempt();
-        if (activeSession) {
-          loginHistory.logStep(
-            "get_2fa_code",
-            "success",
-            { source: "gmail", sender: gmailResult.sender },
-            `Found code from ${gmailResult.sender || "Gmail"}`
-          );
+        // Auto-log if session is active
+        const session = loginHistory.getCurrentSession();
+        if (session) {
+          loginHistory.logToolStep("get_2fa_code", { source: "gmail", sender: gmailResult.sender }, "success");
         }
 
         return {
@@ -134,26 +105,13 @@ export const get2faCodeTool = {
           }],
         };
       }
-
-      if (gmailResult.error) {
-        logger.step(`Gmail error: ${gmailResult.error}`);
-      } else {
-        logger.step("No code found in Gmail");
-      }
     }
 
     // No code found in any source
-    logger.actionEnd(false, "No verification code found");
-
-    // Auto-log to active session if one exists
-    const activeSession = loginHistory.getCurrentAttempt();
-    if (activeSession) {
-      loginHistory.logStep(
-        "get_2fa_code",
-        "failed",
-        { source, configuredSources },
-        "No code found"
-      );
+    // Auto-log failure if session is active
+    const session = loginHistory.getCurrentSession();
+    if (session) {
+      loginHistory.logToolStep("get_2fa_code", { source, configuredSources }, "failed");
     }
 
     return {

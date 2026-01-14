@@ -2,23 +2,23 @@ import { z } from "zod";
 import { onePasswordCLI } from "../onepassword/cli.js";
 import { loginHistory } from "../history/login-history.js";
 
-export const getTotpTool = {
-  name: "get_totp",
+export const getCredentialsTool = {
+  name: "get_credentials",
   description:
-    "Get the current TOTP (one-time password) code for a login item. TOTP codes expire in 30 seconds, so use immediately after retrieval.",
+    "Get username and password for a 1Password login item. Returns credentials for you to fill via browser automation (e.g., Claude for Chrome).",
   inputSchema: z.object({
     item_id: z
       .string()
       .describe("The 1Password item ID (obtained from list_logins)"),
   }),
   handler: async ({ item_id }: { item_id: string }) => {
-    const totp = await onePasswordCLI.getTOTP(item_id);
+    const credentials = await onePasswordCLI.getCredentials(item_id);
 
-    if (!totp) {
+    if (!credentials) {
       // Auto-log failure if session is active
       const session = loginHistory.getCurrentSession();
       if (session) {
-        loginHistory.logToolStep("get_totp", { item_id }, "failed");
+        loginHistory.logToolStep("get_credentials", { item_id }, "failed");
       }
 
       return {
@@ -28,7 +28,7 @@ export const getTotpTool = {
             text: JSON.stringify(
               {
                 success: false,
-                error: `Could not retrieve TOTP for item "${item_id}". The item may not have TOTP configured, or the vault may be locked.`,
+                error: `Could not retrieve credentials for item "${item_id}". The vault may be locked or the item may not exist.`,
               },
               null,
               2
@@ -41,7 +41,11 @@ export const getTotpTool = {
     // Auto-log success if session is active
     const session = loginHistory.getCurrentSession();
     if (session) {
-      loginHistory.logToolStep("get_totp", { item_id }, "success");
+      loginHistory.logToolStep(
+        "get_credentials",
+        { item_id, username: credentials.username },
+        "success"
+      );
     }
 
     return {
@@ -51,8 +55,8 @@ export const getTotpTool = {
           text: JSON.stringify(
             {
               success: true,
-              totp,
-              expires_in: "~30 seconds",
+              username: credentials.username,
+              password: credentials.password,
             },
             null,
             2

@@ -1,290 +1,242 @@
+/**
+ * Login Session Tools
+ * Tools for tracking login sessions and learning patterns
+ */
+
 import { z } from "zod";
-import { loginHistory } from "../learning/login-history.js";
-import { ruleEngine } from "../learning/rule-engine.js";
-import { onePasswordCLI } from "../onepassword/cli.js";
-import { logger } from "../utils/logger.js";
+import { loginHistory, type BrowserStep } from "../history/login-history.js";
+import { patternStore } from "../history/pattern-store.js";
+
+// Schema for browser steps
+const browserStepSchema = z.object({
+  action: z.enum(["fill_field", "click_button", "wait", "navigate"]),
+  field: z.string().optional().describe("For fill_field: 'username', 'password', '2fa_code', etc."),
+  text: z.string().optional().describe("For click_button: button text like 'Next', 'Sign in'"),
+  url: z.string().optional().describe("For navigate: the URL"),
+  seconds: z.number().optional().describe("For wait: duration in seconds"),
+});
 
 /**
- * Tool to start tracking a login session
- * This allows learning from manual login flows (not just smart_login)
+ * Start Login Session Tool
  */
 export const startLoginSessionTool = {
   name: "start_login_session",
-  description: `Start tracking a login session for learning purposes. Call this BEFORE attempting to log into a site.
-This enables VaultRunner to learn from the login flow even when using individual tools like fill_credentials, click_button, etc.
-After the login completes (success or failure), call end_login_session to save the learning.`,
+  description: `Start tracking a login session. Call this BEFORE attempting to log into a site.
+Returns any known patterns for this domain to help guide your login flow.
+When done, call end_login_session with the browser steps you took.`,
   inputSchema: z.object({
-    domain: z.string().describe("The domain being logged into (e.g., 'webflow.com')"),
-    login_url: z.string().describe("The current login page URL"),
-    item_id: z.string().optional().describe("Optional: The 1Password item ID being used"),
+    domain: z.string().describe("The domain being logged into (e.g., 'github.com')"),
+    login_url: z.string().optional().describe("The login page URL"),
   }),
   handler: async ({
     domain,
     login_url,
-    item_id,
   }: {
     domain: string;
-    login_url: string;
-    item_id?: string;
+    login_url?: string;
   }) => {
-    // Check if there's already an active session
-    const currentAttempt = loginHistory.getCurrentAttempt();
-    if (currentAttempt) {
+    // Check for existing session
+    const existing = loginHistory.getCurrentSession();
+    if (existing) {
       return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify({
-              success: false,
-              error: `A login session is already active for ${currentAttempt.domain}. Call end_login_session first.`,
-              activeSession: {
-                id: currentAttempt.id,
-                domain: currentAttempt.domain,
-                startedAt: currentAttempt.startedAt,
-              },
-            }, null, 2),
-          },
-        ],
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            success: false,
+            error: `A login session is already active for ${existing.domain}. Call end_login_session first.`,
+            active_session: {
+              id: existing.id,
+              domain: existing.domain,
+              started_at: existing.startedAt,
+            },
+          }, null, 2),
+        }],
       };
     }
 
-    // Get username from 1Password if item_id provided
-    let username: string | undefined;
-    let itemTitle: string | undefined;
-    if (item_id) {
-      try {
-        const itemInfo = await onePasswordCLI.getItemInfo(item_id);
-        if (itemInfo) {
-          username = itemInfo.username;
-          itemTitle = itemInfo.title;
-        }
-      } catch {
-        // Ignore - username is optional
-      }
-    }
+    // Start new session
+    const sessionId = loginHistory.startSession(domain, login_url);
 
-    // Start the session
-    const attemptId = loginHistory.startAttempt(domain, login_url, { username, itemTitle });
-
-    logger.info(`Started login session: ${attemptId} for ${domain}`);
+    // Check for known pattern
+    const patternInfo = patternStore.getPatternInfo(domain);
 
     return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify({
-            success: true,
-            sessionId: attemptId,
-            domain,
-            loginUrl: login_url,
-            username,
-            message: "Login session started. All fill_credentials, click_button, and other tool calls will be tracked. Call end_login_session when done.",
-          }, null, 2),
-        },
-      ],
+      content: [{
+        type: "text" as const,
+        text: JSON.stringify({
+          success: true,
+          session_id: sessionId,
+          domain,
+          login_url,
+          known_pattern: patternInfo.found ? patternInfo.pattern : null,
+          hint: patternInfo.hint || "When done, call end_login_session with the browser steps you took via Claude for Chrome.",
+        }, null, 2),
+      }],
     };
   },
 };
 
 /**
- * Tool to log a step in the current login session
- */
-export const logLoginStepTool = {
-  name: "log_login_step",
-  description: `Log a step in the current login session. Use this to record what happened during a manual login flow.
-This is called automatically by VaultRunner tools, but you can also call it manually to log custom steps.`,
-  inputSchema: z.object({
-    action: z.enum(["fill_credentials", "click_button", "fill_totp", "get_2fa_code", "wait", "other"]).describe("The action that was performed"),
-    result: z.enum(["success", "partial", "failed"]).describe("The result of the action"),
-    details: z.string().optional().describe("Additional details about what happened"),
-    params: z.record(z.unknown()).optional().describe("Parameters used for the action"),
-  }),
-  handler: async ({
-    action,
-    result,
-    details,
-    params,
-  }: {
-    action: "fill_credentials" | "click_button" | "fill_totp" | "get_2fa_code" | "wait" | "other";
-    result: "success" | "partial" | "failed";
-    details?: string;
-    params?: Record<string, unknown>;
-  }) => {
-    const currentAttempt = loginHistory.getCurrentAttempt();
-    if (!currentAttempt) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify({
-              success: false,
-              error: "No active login session. Call start_login_session first.",
-            }, null, 2),
-          },
-        ],
-      };
-    }
-
-    // Map "other" to a valid action type for logging
-    const logAction = action === "other" ? "wait" : action;
-    loginHistory.logStep(logAction, result, params, details);
-
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify({
-            success: true,
-            logged: { action, result, details },
-            sessionId: currentAttempt.id,
-            stepCount: currentAttempt.steps.length,
-          }, null, 2),
-        },
-      ],
-    };
-  },
-};
-
-/**
- * Tool to end a login session and trigger learning
+ * End Login Session Tool
  */
 export const endLoginSessionTool = {
   name: "end_login_session",
-  description: `End the current login session and save the learning. Call this after a login attempt completes.
-The outcome determines how the system learns:
-- "success": The login worked - the steps will be saved as a working pattern
-- "failed": The login failed - the system will analyze what went wrong and adapt
-- "pending_2fa": Login is waiting for 2FA - partial success
-- "already_logged_in": User was already logged in
-- "abandoned": Login was cancelled`,
+  description: `End the current login session. IMPORTANT: Include the browser steps you took via Claude for Chrome so we can learn the login pattern for this domain.
+
+Example steps array:
+[
+  { "action": "fill_field", "field": "username" },
+  { "action": "click_button", "text": "Next" },
+  { "action": "fill_field", "field": "password" },
+  { "action": "click_button", "text": "Sign in" }
+]`,
   inputSchema: z.object({
-    outcome: z.enum(["success", "failed", "pending_2fa", "already_logged_in", "abandoned"]).describe("The final outcome of the login attempt"),
-    final_state: z.string().optional().describe("Description of the final state (e.g., 'Reached dashboard', 'Stuck on 2FA page')"),
-    error_message: z.string().optional().describe("Error message if the login failed"),
+    success: z.boolean().describe("Whether the login succeeded"),
+    steps: z.array(browserStepSchema).optional().describe("Browser steps taken via Claude for Chrome"),
+    error: z.string().optional().describe("If failed, what went wrong"),
   }),
   handler: async ({
-    outcome,
-    final_state,
-    error_message,
+    success,
+    steps,
+    error,
   }: {
-    outcome: "success" | "failed" | "pending_2fa" | "already_logged_in" | "abandoned";
-    final_state?: string;
-    error_message?: string;
+    success: boolean;
+    steps?: BrowserStep[];
+    error?: string;
   }) => {
-    const currentAttempt = loginHistory.getCurrentAttempt();
-    if (!currentAttempt) {
+    const session = loginHistory.getCurrentSession();
+    if (!session) {
       return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify({
-              success: false,
-              error: "No active login session to end.",
-            }, null, 2),
-          },
-        ],
-      };
-    }
-
-    // Complete the attempt
-    const completedAttempt = loginHistory.completeAttempt(outcome, final_state, error_message);
-
-    if (!completedAttempt) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify({
-              success: false,
-              error: "Failed to complete the login session.",
-            }, null, 2),
-          },
-        ],
-      };
-    }
-
-    // Learn from the attempt
-    ruleEngine.learnFromAttempt(completedAttempt);
-
-    logger.success(`Login session ${completedAttempt.id} completed: ${outcome}`);
-
-    // Get the updated rule to show what was learned
-    const updatedRule = ruleEngine.getRuleForDomain(completedAttempt.domain);
-
-    return {
-      content: [
-        {
+        content: [{
           type: "text" as const,
           text: JSON.stringify({
-            success: true,
-            sessionId: completedAttempt.id,
-            domain: completedAttempt.domain,
-            outcome,
-            stepsRecorded: completedAttempt.steps.length,
-            learning: {
-              ruleUpdated: !!updatedRule,
-              newConfidence: updatedRule?.confidence,
-              adaptationsMade: updatedRule?.adaptations?.length || 0,
-              learningNotes: updatedRule?.learningNotes?.slice(-3) || [],
-            },
-            message: outcome === "success"
-              ? "Login succeeded! Pattern saved for future use."
-              : outcome === "failed"
-              ? "Login failed. The system has analyzed the failure and may adapt the rule."
-              : `Login session ended with outcome: ${outcome}`,
+            success: false,
+            error: "No active login session. Call start_login_session first.",
           }, null, 2),
-        },
-      ],
+        }],
+      };
+    }
+
+    // End the session
+    const completed = loginHistory.endSession(success, steps, error);
+
+    if (!completed) {
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            success: false,
+            error: "Failed to end session",
+          }, null, 2),
+        }],
+      };
+    }
+
+    // Save pattern if successful with browser steps
+    let patternSaved = false;
+    if (success && steps && steps.length > 0) {
+      patternStore.savePattern(completed);
+      patternSaved = true;
+    }
+
+    // Calculate duration
+    const startTime = new Date(completed.startedAt).getTime();
+    const endTime = new Date(completed.completedAt!).getTime();
+    const durationSeconds = Math.round((endTime - startTime) / 1000);
+
+    return {
+      content: [{
+        type: "text" as const,
+        text: JSON.stringify({
+          success: true,
+          session_id: completed.id,
+          domain: completed.domain,
+          outcome: completed.outcome,
+          duration_seconds: durationSeconds,
+          steps_count: (steps?.length || 0) + completed.toolSteps.length,
+          pattern_saved: patternSaved,
+          message: patternSaved
+            ? `Login pattern saved for ${completed.domain}`
+            : success
+              ? "Login successful (no browser steps provided to save pattern)"
+              : `Login failed: ${error || "unknown error"}`,
+        }, null, 2),
+      }],
     };
   },
 };
 
 /**
- * Tool to get current session status
+ * Get Login Pattern Tool
  */
-export const getLoginSessionTool = {
-  name: "get_login_session",
-  description: "Get the current login session status, if any.",
-  inputSchema: z.object({}),
-  handler: async () => {
-    const currentAttempt = loginHistory.getCurrentAttempt();
-
-    if (!currentAttempt) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify({
-              active: false,
-              message: "No active login session.",
-            }, null, 2),
-          },
-        ],
-      };
-    }
+export const getLoginPatternTool = {
+  name: "get_login_pattern",
+  description: `Get the stored login pattern for a domain. Call this before starting a login to see what steps worked before.`,
+  inputSchema: z.object({
+    domain: z.string().describe("The domain to get the pattern for"),
+  }),
+  handler: async ({ domain }: { domain: string }) => {
+    const patternInfo = patternStore.getPatternInfo(domain);
 
     return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify({
-            active: true,
-            session: {
-              id: currentAttempt.id,
-              domain: currentAttempt.domain,
-              loginUrl: currentAttempt.loginUrl,
-              startedAt: currentAttempt.startedAt,
-              username: currentAttempt.username,
-              stepsRecorded: currentAttempt.steps.length,
-              steps: currentAttempt.steps.map(s => ({
-                action: s.action,
-                result: s.result,
-                details: s.details,
-              })),
-            },
-          }, null, 2),
-        },
-      ],
+      content: [{
+        type: "text" as const,
+        text: JSON.stringify(patternInfo, null, 2),
+      }],
+    };
+  },
+};
+
+/**
+ * Get Login Stats Tool
+ */
+export const getLoginStatsTool = {
+  name: "get_login_stats",
+  description: `View login statistics and recent history. Optionally filter by domain.`,
+  inputSchema: z.object({
+    domain: z.string().optional().describe("Optional: filter by domain"),
+    limit: z.number().optional().default(10).describe("Number of recent attempts to return"),
+  }),
+  handler: async ({
+    domain,
+    limit = 10,
+  }: {
+    domain?: string;
+    limit?: number;
+  }) => {
+    const stats = loginHistory.getStats(domain);
+    const recent = loginHistory.getRecent(limit, domain);
+
+    // Format recent attempts for display
+    const recentFormatted = recent.map((a) => ({
+      id: a.id,
+      domain: a.domain,
+      outcome: a.outcome,
+      account: a.accountUsed,
+      two_factor: a.twoFactorType,
+      duration: a.completedAt
+        ? `${Math.round((new Date(a.completedAt).getTime() - new Date(a.startedAt).getTime()) / 1000)}s`
+        : "in progress",
+      time: a.startedAt,
+      browser_steps: a.browserSteps?.length || 0,
+      error: a.error,
+    }));
+
+    return {
+      content: [{
+        type: "text" as const,
+        text: JSON.stringify({
+          stats: {
+            total_attempts: stats.totalAttempts,
+            success_count: stats.successCount,
+            failed_count: stats.failedCount,
+            success_rate: `${Math.round(stats.successRate * 100)}%`,
+            by_domain: stats.byDomain,
+            two_factor_breakdown: stats.twoFactorBreakdown,
+          },
+          recent: recentFormatted,
+        }, null, 2),
+      }],
     };
   },
 };
