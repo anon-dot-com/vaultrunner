@@ -1,7 +1,7 @@
 {
   "name": "vaultrunner",
-  "version": "0.1.0",
-  "description": "MCP server for VaultRunner - secure 1Password autofill for Claude Code",
+  "version": "0.2.0",
+  "description": "MCP server for VaultRunner - 1Password credentials for Claude browser automation",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -21,7 +21,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && cp -r src/dashboard/public dist/dashboard/",
+    "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "lint": "tsc --noEmit",
@@ -32,10 +32,9 @@
     "mcp",
     "claude",
     "claude-code",
-    "autofill",
-    "security",
-    "browser-automation",
-    "credentials"
+    "claude-for-chrome",
+    "credentials",
+    "browser-automation"
   ],
   "author": "Daniel Mason",
   "repository": {
@@ -49,21 +48,16 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "@puppeteer/browsers": "^2.11.0",
-    "@types/express": "^5.0.6",
     "better-sqlite3": "^11.0.0",
-    "commander": "^14.0.2",
+    "commander": "^14.0.0",
     "execa": "^9.0.0",
-    "express": "^5.2.1",
     "googleapis": "^144.0.0",
     "open": "^11.0.0",
-    "ws": "^8.18.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^22.0.0",
-    "@types/ws": "^8.5.0",
     "typescript": "^5.7.0"
   },
   "engines": {

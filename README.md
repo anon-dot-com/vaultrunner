@@ -15,8 +15,8 @@
 </p>
 
 <p align="center">
-  <strong>The missing auth layer for Claude browser automation</strong><br>
-  Secure logins. Automatic MFA. Zero credential exposure.
+  <strong>1Password credentials for Claude browser automation</strong><br>
+  Connect your vault to Claude for Chrome. Automate logins with MFA.
 </p>
 
 <p align="center">
@@ -28,53 +28,48 @@
   <a href="#the-problem">Problem</a> •
   <a href="#how-it-works">Solution</a> •
   <a href="#quick-start">Quick Start</a> •
-  <a href="#security">Security</a>
+  <a href="#mcp-tools">Tools</a>
 </p>
 
 ---
 
 ## The Problem
 
-Claude browser automation works great—until a site asks you to log in.
+Claude for Chrome can automate browsers—until a site asks you to log in.
 
-**New logins, session expirations, and MFA challenges break terminal-first workflows.** When auth is required, you have to leave your terminal, open the browser, enter credentials, handle 2FA codes, and manually complete the flow before automation can continue.
+**Logins, session expirations, and MFA challenges break automation.** When auth is required, you have to manually enter credentials, handle 2FA codes, and complete the flow before automation can continue.
 
-This interrupts:
-- Async automations that run while you're away
-- Scripts that need to authenticate across multiple sites
-- Any workflow where sessions expire
+**VaultRunner bridges 1Password and Claude for Chrome.**
 
-**VaultRunner keeps you in the terminal.**
+## How It Works
 
-## The Solution
-
-VaultRunner connects Claude to 1Password, enabling secure authenticated automation:
-
-| Capability | How It Works |
-|------------|--------------|
-| **1Password Sync** | Credentials flow directly from your vault to the browser—Claude never sees them |
-| **Automatic MFA** | Reads TOTP codes from 1Password, SMS from Messages, verification emails from Gmail |
-| **Multi-step Logins** | Handles username → password → 2FA flows automatically |
-| **Account Selection** | Remembers your preferred account per site |
-| **Learning System** | Improves login reliability over time |
-
-### Security Model
+VaultRunner is an MCP server that gives Claude access to your 1Password credentials:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Claude: "Log me into GitHub"                               │
-│  ↓                                                          │
-│  VaultRunner: Fetches credentials from 1Password            │
-│  ↓                                                          │
-│  Chrome Extension: Fills form directly                      │
-│  ↓                                                          │
-│  Claude receives: { success: true }                         │
-│                                                             │
-│  ✓ Credentials never touch Claude                           │
-│  ✓ Compliant with Claude's security policies                │
-│  ✓ All processing happens locally                           │
+│  You: "Log into GitHub"                                      │
+│  ↓                                                           │
+│  Claude: list_logins("github.com") → VaultRunner MCP         │
+│  ↓                                                           │
+│  VaultRunner: Queries 1Password CLI                          │
+│  ↓                                                           │
+│  Claude: get_credentials(item_id) → Gets username/password   │
+│  ↓                                                           │
+│  Claude for Chrome: Fills form, clicks login                 │
+│  ↓                                                           │
+│  If 2FA needed: get_totp() or get_2fa_code() from SMS/email  │
+│  ↓                                                           │
+│  Logged in!                                                  │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+| Capability | How It Works |
+|------------|--------------|
+| **1Password Integration** | Fetches credentials via 1Password CLI |
+| **TOTP Codes** | Reads authenticator codes from 1Password |
+| **SMS 2FA** | Reads verification codes from macOS Messages |
+| **Email 2FA** | Reads verification codes from Gmail |
+| **Account Selection** | Remembers your preferred account per site |
 
 ## Quick Start
 
@@ -95,16 +90,9 @@ node packages/mcp-server/dist/cli/index.js setup
 This will:
 - Install/verify 1Password CLI
 - Check for 1Password Desktop App (recommended for biometric unlock)
-- Guide you to install the Chrome extension
-- Launch the VaultRunner dashboard in your browser
+- Show you how to add the MCP to Claude Code
 
-### 3. Load Chrome Extension
-
-1. Go to `chrome://extensions`
-2. Enable **Developer mode** (toggle in top right)
-3. Click **Load unpacked** and select `packages/chrome-extension/dist`
-
-### 4. Add VaultRunner MCP to Claude Code
+### 3. Add VaultRunner MCP to Claude Code
 
 Run this command from the vaultrunner directory:
 
@@ -112,250 +100,138 @@ Run this command from the vaultrunner directory:
 claude mcp add vaultrunner -s user -- node $(pwd)/packages/mcp-server/dist/index.js
 ```
 
-Or use the interactive `/mcp` command in Claude Code:
-```
-/mcp
-```
-
-Then select "Add MCP Server" and configure it with:
+Or use `/mcp` in Claude Code and add manually:
 - **Name**: `vaultrunner`
 - **Command**: `node`
 - **Args**: `/full/path/to/vaultrunner/packages/mcp-server/dist/index.js`
 
-### 5. Restart Claude Code
+### 4. Restart Claude Code
 
-Restart Claude Code to load the VaultRunner MCP. You can verify it's working by asking Claude to check the vault status.
+Restart Claude Code to load the VaultRunner MCP. Verify it's working:
 
-### 6. Connect and Automate
-
-**Important:** The browser extension must be connected for logins to work. This requires:
-- Chrome open
-- VaultRunner extension enabled
-- An active browser tab
-
-You can check connection status anytime—Claude will show you if the extension is connected.
-
-```
-You: "Log into my AWS console and check EC2 instances"
-
-Claude: I'll log you into AWS.
-        [VaultRunner fills credentials + handles MFA]
-
-        You're now logged in. I can see 3 running EC2 instances...
+```bash
+claude mcp list  # Should show vaultrunner
 ```
 
-## How It Works
+### 5. Install Claude for Chrome
 
-### Credential Flow
+VaultRunner provides credentials; Claude for Chrome handles browser automation.
 
-1. **Claude requests login** → Calls `list_logins("aws.amazon.com")`
-2. **VaultRunner queries 1Password** → Returns account list (no passwords)
-3. **Claude selects account** → Calls `fill_credentials(item_id)`
-4. **1Password → Extension → Browser** → Credentials filled directly
-5. **Claude receives confirmation** → `{ success: true, filledFields: ["email", "password"] }`
+Install from Chrome Web Store: [Claude for Chrome](https://chromewebstore.google.com/detail/claude/danfoofmcgmjopflpidnpkdlphdngjgo)
 
-**Claude never sees your password.** It only knows the operation succeeded.
-
-### MFA Handling
-
-VaultRunner automatically handles multi-factor authentication:
-
-| MFA Type | Source | How |
-|----------|--------|-----|
-| **TOTP** | 1Password | Reads authenticator codes directly from your vault |
-| **SMS** | macOS Messages | Queries local Messages database for verification codes |
-| **Email** | Gmail | Searches recent emails for verification codes |
+### 6. Automate Logins
 
 ```
-Site sends SMS: "Your code is 847291"
-↓
-VaultRunner: get_2fa_code(sender="40404")
-↓
-Returns: { code: "847291", source: "messages" }
-↓
-VaultRunner: fill_totp(code="847291")
-↓
-Login complete
+You: "Log into my AWS console"
+
+Claude: I'll look up your AWS credentials.
+        [Calls list_logins("aws.amazon.com")]
+
+        Found 2 accounts. Which one?
+        1. work@company.com
+        2. personal@gmail.com
+
+You: "Use work"
+
+Claude: [Calls get_credentials(item_id)]
+        [Uses Claude for Chrome to fill and submit]
+
+        Done! You're logged into AWS.
 ```
-
-### Multi-Step Login Flows
-
-Many sites split login across multiple pages. VaultRunner handles this:
-
-```
-1. fill_credentials → fills username
-2. click_button("Next")
-3. fill_credentials → fills password
-4. click_button("Sign in")
-5. get_2fa_code → retrieves SMS code
-6. fill_totp → enters code
-7. click_button("Verify")
-```
-
-The `smart_login` tool automates this entire flow using learned patterns.
 
 ## MCP Tools
 
-### Authentication
+### Credentials
 
 | Tool | Description |
 |------|-------------|
+| `get_vault_status` | Check if 1Password is authenticated |
 | `list_logins` | List accounts for a domain (usernames only) |
-| `fill_credentials` | Fill username/password into current page |
-| `fill_totp` | Fill verification code |
+| `get_credentials` | Get username and password for an item |
 | `get_totp` | Get TOTP code from 1Password |
-| `get_2fa_code` | Read codes from SMS or email |
-| `click_button` | Click buttons for multi-step flows |
 
-### Automation
+### 2FA Codes
 
 | Tool | Description |
 |------|-------------|
-| `smart_login` | Fully automated login with learned patterns |
-| `login_stats` | View success rates and patterns |
+| `get_2fa_code` | Read verification codes from SMS or email |
+
+### Account Preferences
+
+| Tool | Description |
+|------|-------------|
 | `set_account_preference` | Remember default account per site |
+| `get_account_preference` | Get saved default account |
+| `clear_account_preference` | Clear saved preference |
 
-### System
+## Login Flow Example
 
-| Tool | Description |
-|------|-------------|
-| `get_vault_status` | Check 1Password and extension status |
+Here's how Claude handles a multi-step login with 2FA:
 
-## Security
-
-### Why This Is Safe
-
-1. **Credentials bypass Claude entirely** — 1Password → Extension → DOM. Claude only receives success/failure.
-
-2. **Compliant with Claude's policies** — Claude doesn't handle passwords. VaultRunner does, locally.
-
-3. **Your vault, your control** — Requires 1Password biometric auth. Nothing stored externally.
-
-4. **Fully local** — No servers. No cloud. Everything on your machine.
-
-5. **Open source** — Audit every line. No hidden credential handling.
-
-### What Claude Sees
-
-```json
-// Claude's view of a login:
-{
-  "action": "fill_credentials",
-  "result": {
-    "success": true,
-    "filledFields": ["username", "password"]
-  }
-}
-
-// What Claude does NOT see:
-// - Your actual password
-// - Your TOTP secrets
-// - Your email verification codes
+```
+1. list_logins("x.com") → Get available accounts
+2. get_credentials(item_id) → Get username/password
+3. [Claude for Chrome] Fill username, click "Next"
+4. [Claude for Chrome] Fill password, click "Log in"
+5. get_2fa_code(sender="40404") → Read SMS code
+6. [Claude for Chrome] Fill 2FA code, click "Verify"
 ```
 
 ## Requirements
 
-- **Claude Max subscription** — Required for Claude Code access
-- **Claude for Chrome extension** — [Install from Chrome Web Store](https://chromewebstore.google.com/publisher/anthropic/u308d63ea0533efcf7ba778ad42da7390)
-- **1Password** with CLI access enabled ([install guide](https://developer.1password.com/docs/cli/get-started/))
-- **1Password Desktop App** (optional, enables biometric unlock for CLI)
-- **Chrome** browser with VaultRunner extension loaded
-- **Claude Code** for AI-powered browser automation
+- **Claude Max subscription** — Required for Claude Code
+- **Claude for Chrome** — [Install from Chrome Web Store](https://chromewebstore.google.com/detail/claude/danfoofmcgmjopflpidnpkdlphdngjgo)
+- **1Password** with CLI enabled ([install guide](https://developer.1password.com/docs/cli/get-started/))
+- **1Password Desktop App** (optional, enables biometric unlock)
 - **Node.js 18+**
-
-### Runtime Requirements
-
-For logins to work, you need:
-1. **1Password vault unlocked** — Use biometrics or sign in via `op signin`
-2. **Browser extension connected** — Chrome must be open with the VaultRunner extension active
-
-Use `get_vault_status` in Claude Code to check both requirements.
 
 ### Optional (for 2FA)
 
-- **macOS Messages** — For SMS code reading (requires Full Disk Access, run `vaultrunner setup-messages`)
-- **Gmail** — For email code reading (requires Google OAuth, run `vaultrunner setup-gmail`)
+- **macOS Messages** — For SMS code reading (requires Full Disk Access)
+- **Gmail** — For email code reading (requires Google OAuth)
 
 ## CLI Commands
 
-All commands should be run from the vaultrunner directory.
-
-**Option 1: Use node directly (recommended)**
 ```bash
-node packages/mcp-server/dist/cli/index.js <command>
+# Setup
+node packages/mcp-server/dist/cli/index.js setup          # Full setup wizard
+node packages/mcp-server/dist/cli/index.js status         # Check system status
+node packages/mcp-server/dist/cli/index.js config         # Show MCP config instructions
+
+# 2FA Configuration
+node packages/mcp-server/dist/cli/index.js setup-messages # Configure SMS reading (macOS)
+node packages/mcp-server/dist/cli/index.js setup-gmail    # Connect Gmail for email 2FA
+node packages/mcp-server/dist/cli/index.js disconnect-gmail
+node packages/mcp-server/dist/cli/index.js test-2fa       # Test 2FA code reading
 ```
 
-**Option 2: Create an alias for convenience**
+Or create an alias:
 ```bash
-# Add to your shell profile (.bashrc, .zshrc, etc.)
 alias vaultrunner="node /path/to/vaultrunner/packages/mcp-server/dist/cli/index.js"
 ```
 
-The examples below use the alias. If you haven't set it up, replace `vaultrunner` with `node packages/mcp-server/dist/cli/index.js`.
+## Troubleshooting
 
-### Setup & Status
+### "Vault not authenticated"
 
-```bash
-vaultrunner setup           # Full setup wizard (1Password CLI, Chrome extension)
-vaultrunner status          # Check system status and connections
-```
+1Password needs to be unlocked:
+1. Open 1Password Desktop App and unlock with biometrics, OR
+2. Run `op signin` in terminal
 
-### 2FA Configuration
+### MCP not loading in Claude Code
 
-```bash
-vaultrunner setup-messages  # Configure SMS/iMessage reading (macOS, requires Full Disk Access)
-vaultrunner setup-gmail     # Connect Gmail for email 2FA codes (requires Google OAuth)
-vaultrunner disconnect-gmail # Remove Gmail connection
-vaultrunner test-2fa        # Test 2FA code reading from all sources
-```
+1. Verify the MCP is added:
+   ```bash
+   claude mcp list
+   ```
+2. Restart Claude Code after adding
+3. Check status with `/mcp` in Claude Code
 
-### Learning & Stats
+### 2FA codes not found
 
-```bash
-vaultrunner stats           # View login statistics and learned patterns
-vaultrunner contribute-rules # Share learned patterns with the community
-vaultrunner clear-history   # Clear login history (keeps learned rules)
-vaultrunner dashboard       # Open web dashboard
-```
-
-## Dashboard
-
-VaultRunner includes a web dashboard for monitoring and debugging login flows. The dashboard automatically opens after running `vaultrunner setup`.
-
-### Features
-
-- **Login History** — View all login attempts with detailed step-by-step breakdowns
-- **Learned Rules** — See patterns VaultRunner has learned for each site
-- **Success Rates** — Monitor login success rates and identify problematic sites
-- **Active Sessions** — Track which sites you're currently logged into
-- **Rule Contribution** — See which learned patterns are ready to share with the community
-
-### Starting the Dashboard
-
-The dashboard starts automatically after setup completes. To start it manually:
-
-```bash
-# Using the alias (if configured)
-vaultrunner dashboard              # Start on default port (19877)
-vaultrunner dashboard --port 8080  # Start on custom port
-
-# Or using node directly
-node packages/mcp-server/dist/cli/index.js dashboard
-node packages/mcp-server/dist/cli/index.js dashboard --port 8080
-```
-
-The dashboard runs at `http://localhost:19877` and opens in your browser automatically.
-
-### API Endpoints
-
-The dashboard exposes a REST API for programmatic access:
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/stats` | Overall login statistics |
-| `GET /api/history` | Login attempt history |
-| `GET /api/rules` | Learned site rules |
-| `GET /api/sessions` | Active login sessions |
+- **SMS**: Run `vaultrunner setup-messages` and grant Full Disk Access
+- **Gmail**: Run `vaultrunner setup-gmail` to connect your account
+- **TOTP**: Ensure the 1Password item has a one-time password configured
 
 ## Use Cases
 
@@ -365,38 +241,6 @@ The dashboard exposes a REST API for programmatic access:
 - **SaaS Management**: Access Salesforce, HubSpot, Zendesk
 - **E-commerce**: Manage Shopify, Amazon Seller accounts
 - **Any authenticated workflow** Claude couldn't do before
-
-## Troubleshooting
-
-### "Extension not connected"
-
-The browser extension must be active for logins to work:
-1. Open Chrome browser
-2. Ensure the VaultRunner extension is enabled in `chrome://extensions`
-3. Have at least one tab open (the extension connects via active tabs)
-4. Check status with `get_vault_status` in Claude Code
-
-### "Vault not unlocked"
-
-1Password needs to be unlocked:
-1. Open 1Password Desktop App and unlock with biometrics, OR
-2. Run `op signin` in terminal to authenticate via CLI
-
-### MCP not loading in Claude Code
-
-1. Make sure you've added the MCP using:
-   ```bash
-   claude mcp add vaultrunner -s user -- node /path/to/vaultrunner/packages/mcp-server/dist/index.js
-   ```
-2. Restart Claude Code after adding the MCP
-3. Run `claude mcp list` to verify vaultrunner is configured
-4. Check server status with `/mcp` in Claude Code
-
-### 2FA codes not found
-
-- **SMS**: Run `vaultrunner setup-messages` and grant Full Disk Access
-- **Gmail**: Run `vaultrunner setup-gmail` to connect your account
-- **TOTP**: Ensure the 1Password item has a one-time password configured
 
 ## Development
 
@@ -412,6 +256,6 @@ MIT © [Anonymity Labs, Inc.](https://anon.com)
 ---
 
 <p align="center">
-  <strong>Vaultrunner makes authenticated automation possible.</strong><br>
-  Claude handles the browser. 1Password handles the credentials. You stay in control.
+  <strong>VaultRunner + Claude for Chrome = Authenticated automation.</strong><br>
+  Claude handles the browser. 1Password handles the credentials.
 </p>

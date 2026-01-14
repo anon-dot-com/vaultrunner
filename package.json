@@ -1,7 +1,7 @@
 {
   "name": "vaultrunner",
-  "version": "0.1.0",
-  "description": "Secure 1Password credential autofill for Claude Code - credentials never exposed to AI",
+  "version": "0.2.0",
+  "description": "1Password credentials for Claude browser automation via MCP",
   "private": true,
   "scripts": {
     "dev": "pnpm --filter @vaultrunner/mcp-server dev",
@@ -12,8 +12,9 @@
     "1password",
     "mcp",
     "claude",
-    "autofill",
-    "security"
+    "claude-for-chrome",
+    "credentials",
+    "browser-automation"
   ],
   "author": "Daniel Mason",
   "license": "MIT",
