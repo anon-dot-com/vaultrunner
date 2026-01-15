@@ -171,8 +171,7 @@ Claude: [Calls get_credentials(item_id)]
 
 | Tool | Description |
 |------|-------------|
-| `start_login_session` | Start tracking a login attempt (returns known patterns) |
-| `end_login_session` | End session with browser steps taken |
+| `report_login_outcome` | Report login result (sessions auto-start on `get_credentials`) |
 | `get_login_pattern` | Get stored pattern for a domain |
 | `get_login_stats` | View login history and statistics |
 
@@ -206,20 +205,19 @@ Each login attempt records:
 
 ## Login Flow Example
 
-Here's how Claude handles a multi-step login with 2FA and session tracking:
+Here's how Claude handles a multi-step login with 2FA:
 
 ```
-1. start_login_session("x.com") → Start tracking, get known pattern
-2. list_logins("x.com") → Get available accounts
-3. get_credentials(item_id) → Get username/password
-4. [Claude for Chrome] Fill username, click "Next"
-5. [Claude for Chrome] Fill password, click "Log in"
-6. get_2fa_code(sender="40404") → Read SMS code
-7. [Claude for Chrome] Fill 2FA code, click "Verify"
-8. end_login_session(success=true, steps=[...]) → Save pattern
+1. list_logins("x.com") → Get available accounts
+2. get_credentials(item_id) → Get username/password [SESSION AUTO-STARTS]
+3. [Claude for Chrome] Fill username, click "Next"
+4. [Claude for Chrome] Fill password, click "Log in"
+5. get_2fa_code(sender="40404") → Read SMS code
+6. [Claude for Chrome] Fill 2FA code, click "Verify"
+7. report_login_outcome(success=true) → Record result [SESSION ENDS]
 ```
 
-The session tracking automatically logs MCP tool calls, and `end_login_session` saves the browser steps for future reference.
+Sessions auto-start when `get_credentials` is called. Call `report_login_outcome` after every login to record the result.
 
 ## Requirements
 

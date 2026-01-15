@@ -579,7 +579,7 @@ program
     if (Object.keys(stats.twoFactorBreakdown).length > 0) {
       console.log(`${colors.bold}2FA Methods:${colors.reset}`);
       for (const [type, count] of Object.entries(stats.twoFactorBreakdown)) {
-        const icon = type === "totp" ? "🔐" : type === "sms" ? "📱" : type === "email" ? "📧" : "❌";
+        const icon = type === "totp" ? "🔐" : type === "sms" ? "📱" : type === "email" ? "📧" : "➖";
         console.log(`   ${icon} ${type}: ${count}`);
       }
       console.log("");
