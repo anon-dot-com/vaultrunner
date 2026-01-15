@@ -38,15 +38,22 @@ export const getCredentialsTool = {
       };
     }
 
-    // Auto-log success if session is active
-    const session = loginHistory.getCurrentSession();
-    if (session) {
-      loginHistory.logToolStep(
-        "get_credentials",
-        { item_id, username: credentials.username },
-        "success"
-      );
+    // Get item info to extract domain for auto-session
+    const itemInfo = await onePasswordCLI.getItemInfo(item_id);
+    const domain = itemInfo?.domain || "unknown";
+
+    // AUTO-START SESSION if none exists
+    // This enables tracking even when Claude forgets to call start_login_session
+    if (!loginHistory.hasActiveSession()) {
+      loginHistory.autoStartSession(domain, credentials.username, itemInfo?.url);
     }
+
+    // Log the tool step
+    loginHistory.logToolStep(
+      "get_credentials",
+      { item_id, username: credentials.username, domain },
+      "success"
+    );
 
     return {
       content: [

@@ -38,10 +38,11 @@ export const getTotpTool = {
       };
     }
 
-    // Auto-log success if session is active
-    const session = loginHistory.getCurrentSession();
-    if (session) {
+    // Auto-log success and set 2FA type
+    // This works even for auto-started sessions
+    if (loginHistory.hasActiveSession()) {
       loginHistory.logToolStep("get_totp", { item_id }, "success");
+      loginHistory.setTwoFactorType("totp");
     }
 
     return {

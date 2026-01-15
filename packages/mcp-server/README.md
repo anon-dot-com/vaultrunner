@@ -90,14 +90,13 @@ npx vaultrunner clear-patterns  # Clear learned patterns
 |------|-------------|
 | `get_vault_status` | Check if 1Password CLI is authenticated |
 | `list_logins` | List accounts for a domain |
-| `get_credentials` | Get username and password for an item |
+| `get_credentials` | Get username and password (auto-starts session) |
 | `get_totp` | Get TOTP code from 1Password |
 | `get_2fa_code` | Read codes from SMS/email |
 | `set_account_preference` | Save default account for a domain |
 | `get_account_preference` | Get saved default account |
 | `clear_account_preference` | Clear saved preference |
-| `start_login_session` | Start tracking a login attempt |
-| `end_login_session` | End session with browser steps |
+| `report_login_outcome` | Report login result (call after every login) |
 | `get_login_pattern` | Get stored pattern for a domain |
 | `get_login_stats` | View login statistics |
 
@@ -105,10 +104,11 @@ npx vaultrunner clear-patterns  # Clear learned patterns
 
 ```
 1. list_logins("github.com")        # Get available accounts
-2. get_credentials(item_id)         # Get username/password
+2. get_credentials(item_id)         # Get username/password [SESSION STARTS]
 3. [Claude for Chrome fills form]   # Browser automation
 4. get_totp(item_id)                # Get 2FA code if needed
 5. [Claude for Chrome fills 2FA]    # Complete login
+6. report_login_outcome(success)    # Record result [SESSION ENDS]
 ```
 
 ## Requirements

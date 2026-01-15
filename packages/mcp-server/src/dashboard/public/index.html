@@ -246,6 +246,16 @@
       color: var(--text-muted);
     }
 
+    .badge.verified {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--accent-green);
+    }
+
+    .badge.unverified {
+      background: rgba(210, 153, 34, 0.15);
+      color: var(--accent-yellow);
+    }
+
     .domain-link {
       color: var(--accent-blue);
       text-decoration: none;
@@ -555,6 +565,7 @@
     </div>
 
     <!-- 2FA Breakdown -->
+    <div class="section-title" style="margin-bottom: 12px;">2FA Methods</div>
     <div class="twofa-grid" id="twofa-grid">
       <div class="twofa-card">
         <div class="icon">🔐</div>
@@ -572,7 +583,7 @@
         <div class="label">Email</div>
       </div>
       <div class="twofa-card">
-        <div class="icon">❌</div>
+        <div class="icon">➖</div>
         <div class="count" id="twofa-none">0</div>
         <div class="label">None</div>
       </div>
@@ -597,13 +608,14 @@
               <th>Domain</th>
               <th>Account</th>
               <th>Outcome</th>
+              <th>Tracking</th>
               <th>2FA</th>
               <th>Steps</th>
               <th>Time</th>
             </tr>
           </thead>
           <tbody id="history-table">
-            <tr><td colspan="6" class="empty-state">Loading...</td></tr>
+            <tr><td colspan="7" class="empty-state">Loading...</td></tr>
           </tbody>
         </table>
       </div>
@@ -702,6 +714,17 @@
       }
     }
 
+    // Format tracking status - clear labels
+    function formatTracking(quality, outcome) {
+      if (outcome === 'abandoned') {
+        return '<span style="color: var(--text-muted);">—</span>';
+      }
+      if (quality === 'gold' || quality === 'silver') {
+        return '<span class="badge verified">Verified</span>';
+      }
+      return '<span class="badge unverified">Unverified</span>';
+    }
+
     // Load history
     async function loadHistory() {
       try {
@@ -711,7 +734,7 @@
         const tbody = document.getElementById('history-table');
 
         if (data.attempts.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No login attempts yet. Use VaultRunner to log into sites.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No login attempts yet. Use VaultRunner to log into sites.</td></tr>';
           return;
         }
 
@@ -725,6 +748,7 @@
             </td>
             <td>${a.accountUsed || '-'}</td>
             <td><span class="badge ${a.outcome}">${a.outcome}</span></td>
+            <td>${formatTracking(a.dataQuality, a.outcome)}</td>
             <td><span class="badge ${a.twoFactorType || 'none'}">${a.twoFactorType || 'none'}</span></td>
             <td>${(a.toolStepCount || 0) + (a.browserStepCount || 0)}</td>
             <td><span class="time-ago">${timeAgo(a.startedAt)}</span></td>
@@ -733,7 +757,7 @@
       } catch (err) {
         console.error('Failed to load history:', err);
         document.getElementById('history-table').innerHTML =
-          '<tr><td colspan="6" class="empty-state">Failed to load history</td></tr>';
+          '<tr><td colspan="7" class="empty-state">Failed to load history</td></tr>';
       }
     }
 

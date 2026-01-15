@@ -17,6 +17,7 @@ import {
   endLoginSessionTool,
   getLoginPatternTool,
   getLoginStatsTool,
+  reportLoginOutcomeTool,
 } from "./tools/login-session.js";
 
 const server = new McpServer({
@@ -108,6 +109,13 @@ server.tool(
   getLoginStatsTool.description,
   getLoginStatsTool.inputSchema.shape,
   getLoginStatsTool.handler
+);
+
+server.tool(
+  reportLoginOutcomeTool.name,
+  reportLoginOutcomeTool.description,
+  reportLoginOutcomeTool.inputSchema.shape,
+  reportLoginOutcomeTool.handler
 );
 
 // Handle shutdown

@@ -214,6 +214,7 @@ export const getLoginStatsTool = {
       outcome: a.outcome,
       account: a.accountUsed,
       two_factor: a.twoFactorType,
+      data_quality: a.dataQuality || "bronze",
       duration: a.completedAt
         ? `${Math.round((new Date(a.completedAt).getTime() - new Date(a.startedAt).getTime()) / 1000)}s`
         : "in progress",
@@ -230,11 +231,119 @@ export const getLoginStatsTool = {
             total_attempts: stats.totalAttempts,
             success_count: stats.successCount,
             failed_count: stats.failedCount,
+            abandoned_count: stats.abandonedCount,
             success_rate: `${Math.round(stats.successRate * 100)}%`,
             by_domain: stats.byDomain,
             two_factor_breakdown: stats.twoFactorBreakdown,
+            data_quality_breakdown: stats.dataQualityBreakdown,
           },
           recent: recentFormatted,
+        }, null, 2),
+      }],
+    };
+  },
+};
+
+/**
+ * Report Login Outcome Tool
+ *
+ * This is the PRIMARY tool Claude should use after completing a login.
+ * Sessions auto-start when get_credentials() is called.
+ * This tool ends the session and records the outcome.
+ */
+export const reportLoginOutcomeTool = {
+  name: "report_login_outcome",
+  description: `Report the outcome of a login attempt. Call this AFTER completing (or failing) a login.
+
+IMPORTANT: Always call this after a login attempt to record the outcome.
+
+Including steps is optional but recommended - it enables pattern learning for faster future logins.
+
+Example with steps (recommended):
+{
+  "success": true,
+  "steps": [
+    { "action": "fill_field", "field": "username" },
+    { "action": "click_button", "text": "Next" },
+    { "action": "fill_field", "field": "password" },
+    { "action": "click_button", "text": "Sign in" }
+  ]
+}
+
+Example without steps (minimum):
+{ "success": true }`,
+  inputSchema: z.object({
+    success: z.boolean().describe("Whether the login succeeded"),
+    steps: z.array(browserStepSchema).optional().describe("Browser steps taken (recommended for pattern learning)"),
+    error: z.string().optional().describe("Error message if login failed"),
+  }),
+  handler: async ({
+    success,
+    steps,
+    error,
+  }: {
+    success: boolean;
+    steps?: BrowserStep[];
+    error?: string;
+  }) => {
+    const session = loginHistory.getCurrentSession();
+
+    if (!session) {
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            success: false,
+            warning: "No active login session found. The session may have timed out or already been reported.",
+            tip: "Sessions are auto-started when you call get_credentials, so this warning usually means the login was already recorded.",
+          }, null, 2),
+        }],
+      };
+    }
+
+    // End the session with the reported outcome
+    const completed = loginHistory.endSession(success, steps, error);
+
+    if (!completed) {
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            success: false,
+            error: "Failed to record login outcome",
+          }, null, 2),
+        }],
+      };
+    }
+
+    // Save pattern if successful with browser steps
+    let patternSaved = false;
+    if (success && steps && steps.length > 0) {
+      patternStore.savePattern(completed);
+      patternSaved = true;
+    }
+
+    // Calculate duration
+    const startTime = new Date(completed.startedAt).getTime();
+    const endTime = new Date(completed.completedAt!).getTime();
+    const durationSeconds = Math.round((endTime - startTime) / 1000);
+
+    return {
+      content: [{
+        type: "text" as const,
+        text: JSON.stringify({
+          success: true,
+          recorded: {
+            domain: completed.domain,
+            outcome: completed.outcome,
+            data_quality: completed.dataQuality,
+            duration_seconds: durationSeconds,
+            two_factor_type: completed.twoFactorType,
+            pattern_saved: patternSaved,
+          },
+          message: patternSaved
+            ? `✓ Login recorded - pattern saved for ${completed.domain}`
+            : `✓ Login recorded for ${completed.domain}`,
         }, null, 2),
       }],
     };
