@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VaultRunner - Auth Layer for Claude Browser Automation</title>
-  <meta name="description" content="The missing auth layer for Claude browser automation. 1Password credentials, automatic MFA, fully local.">
+  <title>VaultRunner - A Password Manager for Claude for Chrome</title>
+  <meta name="description" content="Give Claude for Chrome a password manager. VaultRunner pulls from 1Password, fills forms, handles 2FA, and learns what works. Fully open source.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=VT323&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -199,9 +199,13 @@
 
     .hero-content {
       max-width: 700px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     .hero-logo {
+      display: block;
       width: 80px;
       height: 80px;
       margin: 0 auto 24px;
@@ -301,218 +305,6 @@
       flex-wrap: wrap;
     }
 
-    /* Section */
-    .section {
-      padding: 80px 0;
-    }
-
-    .section-header {
-      text-align: center;
-      margin-bottom: 48px;
-    }
-
-    .section-label {
-      font-family: 'VT323', monospace;
-      font-size: 16px;
-      color: var(--coral);
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      margin-bottom: 12px;
-    }
-
-    .section h2 {
-      font-family: 'VT323', monospace;
-      font-size: 40px;
-      color: var(--text-primary);
-    }
-
-    /* How it Works */
-    .flow-section {
-      background: var(--bg-secondary);
-      border-top: 4px solid var(--border);
-      border-bottom: 4px solid var(--border);
-    }
-
-    .flow-container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 24px;
-      flex-wrap: wrap;
-      padding: 32px 0;
-    }
-
-    .flow-step {
-      text-align: center;
-    }
-
-    .flow-icon {
-      width: 64px;
-      height: 64px;
-      background: var(--bg-primary);
-      border: 4px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 12px;
-    }
-
-    .flow-icon.active {
-      border-color: var(--coral);
-    }
-
-    .flow-icon svg {
-      width: 28px;
-      height: 28px;
-      color: var(--text-secondary);
-    }
-
-    .flow-icon.active svg {
-      color: var(--coral);
-    }
-
-    .flow-label {
-      font-size: 12px;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-    }
-
-    .flow-arrow {
-      color: var(--coral);
-      font-family: 'VT323', monospace;
-      font-size: 32px;
-    }
-
-    .flow-banner {
-      margin-top: 40px;
-      text-align: center;
-    }
-
-    .flow-banner img {
-      max-width: 100%;
-      height: auto;
-      border: 4px solid var(--border);
-      image-rendering: pixelated;
-    }
-
-    /* Features */
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-    }
-
-    @media (max-width: 800px) {
-      .features-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .feature-card {
-      background: var(--bg-secondary);
-      border: 4px solid var(--border);
-      padding: 28px;
-      transition: all 0.1s;
-    }
-
-    .feature-card:hover {
-      border-color: var(--coral);
-      transform: translate(-2px, -2px);
-      box-shadow: 4px 4px 0 var(--coral-dark);
-    }
-
-    .feature-icon {
-      width: 48px;
-      height: 48px;
-      background: var(--bg-primary);
-      border: 3px solid var(--coral);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 16px;
-    }
-
-    .feature-icon svg {
-      width: 24px;
-      height: 24px;
-      color: var(--coral);
-    }
-
-    .feature-card h3 {
-      font-family: 'VT323', monospace;
-      font-size: 24px;
-      margin-bottom: 8px;
-      color: var(--text-primary);
-    }
-
-    .feature-card p {
-      font-size: 14px;
-      color: var(--text-secondary);
-      line-height: 1.6;
-    }
-
-    /* Quick Start */
-    .quickstart {
-      background: var(--bg-secondary);
-      border-top: 4px solid var(--border);
-      border-bottom: 4px solid var(--border);
-    }
-
-    .quickstart-terminal {
-      max-width: 700px;
-      margin: 0 auto;
-      background: var(--bg-primary);
-      border: 4px solid var(--cyan);
-      position: relative;
-    }
-
-    .quickstart-terminal .terminal-header {
-      background: var(--cyan);
-    }
-
-    .quickstart-terminal .terminal-body {
-      padding: 24px;
-    }
-
-    .quickstart-step {
-      display: flex;
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    .quickstart-step:last-child {
-      margin-bottom: 0;
-    }
-
-    .step-number {
-      width: 28px;
-      height: 28px;
-      background: var(--coral);
-      color: var(--bg-primary);
-      font-family: 'VT323', monospace;
-      font-size: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .step-content {
-      flex: 1;
-    }
-
-    .step-content .label {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-
-    .step-content code {
-      font-size: 14px;
-      color: var(--cyan);
-    }
-
     /* Footer */
     footer {
       padding: 40px 0;
@@ -569,14 +361,6 @@
         flex-direction: column;
         text-align: center;
       }
-
-      .flow-arrow {
-        display: none;
-      }
-
-      .flow-container {
-        gap: 16px;
-      }
     }
   </style>
 </head>
@@ -588,11 +372,8 @@
         VAULTRUNNER
       </a>
       <div class="nav-links">
-        <a href="#features">Features</a>
-        <a href="#install">Install</a>
-        <a href="/support.html">Support</a>
         <a href="https://github.com/anon-dot-com/vaultrunner" target="_blank">GitHub</a>
-        <a href="#install" class="btn btn-primary">Get Started</a>
+        <a href="/support.html">Support</a>
       </div>
     </div>
   </nav>
@@ -602,8 +383,8 @@
       <div class="hero-content">
         <img src="branding/logo.png" alt="VaultRunner" class="hero-logo">
         <div class="hero-badge">Works with Claude for Chrome</div>
-        <h1>The missing <span class="highlight">auth layer</span> for Claude browser automation</h1>
-        <p>1Password credentials. Automatic MFA. Fully local.</p>
+        <h1>Give Claude for Chrome a <span class="highlight">password manager</span></h1>
+        <p>Pulls from 1Password. Fills forms. Handles 2FA. Learns what works.</p>
 
         <div class="terminal scanlines">
           <div class="terminal-header">
@@ -627,158 +408,15 @@
         </div>
       </div>
     </section>
-
-    <section class="flow-section" id="how">
-      <div class="container">
-        <div class="section-header">
-          <div class="section-label">How it works</div>
-          <h2>Secure credential flow</h2>
-        </div>
-
-        <div class="flow-container">
-          <div class="flow-step">
-            <div class="flow-icon active">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="4 17 10 11 4 5"/>
-                <line x1="12" y1="19" x2="20" y2="19"/>
-              </svg>
-            </div>
-            <div class="flow-label">Claude Code</div>
-          </div>
-          <span class="flow-arrow">></span>
-          <div class="flow-step">
-            <div class="flow-icon active">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-            </div>
-            <div class="flow-label">VaultRunner</div>
-          </div>
-          <span class="flow-arrow">></span>
-          <div class="flow-step">
-            <div class="flow-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg>
-            </div>
-            <div class="flow-label">1Password</div>
-          </div>
-          <span class="flow-arrow">></span>
-          <div class="flow-step">
-            <div class="flow-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <circle cx="12" cy="12" r="4"/>
-                <line x1="21.17" y1="8" x2="12" y2="8"/>
-                <line x1="3.95" y1="6.06" x2="8.54" y2="14"/>
-                <line x1="10.88" y1="21.94" x2="15.46" y2="14"/>
-              </svg>
-            </div>
-            <div class="flow-label">Browser</div>
-          </div>
-        </div>
-
-        <div class="flow-banner">
-          <img src="branding/banner.png" alt="VaultRunner login automation">
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="features">
-      <div class="container">
-        <div class="section-header">
-          <div class="section-label">Features</div>
-          <h2>Everything stays local</h2>
-        </div>
-
-        <div class="features-grid">
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg>
-            </div>
-            <h3>1Password Integration</h3>
-            <p>Fetches credentials via official 1Password CLI. No external servers. Your passwords never leave your machine.</p>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-              </svg>
-            </div>
-            <h3>Automatic MFA</h3>
-            <p>TOTP from 1Password. SMS from Messages. Email from Gmail. Handles 2FA automatically so you don't have to.</p>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                <line x1="8" y1="21" x2="16" y2="21"/>
-                <line x1="12" y1="17" x2="12" y2="21"/>
-              </svg>
-            </div>
-            <h3>Fully Local</h3>
-            <p>No servers. No cloud. No analytics. Everything runs on your machine. Open source and fully auditable.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="quickstart" id="install">
-      <div class="container section">
-        <div class="section-header">
-          <div class="section-label">Quick Start</div>
-          <h2>Three steps to automate logins</h2>
-        </div>
-
-        <div class="quickstart-terminal scanlines">
-          <div class="terminal-header">
-            <div class="terminal-dot"></div>
-            <div class="terminal-dot"></div>
-            <div class="terminal-dot"></div>
-            <span class="terminal-title">Installation</span>
-          </div>
-          <div class="terminal-body">
-            <div class="quickstart-step">
-              <div class="step-number">1</div>
-              <div class="step-content">
-                <div class="label">Install 1Password CLI</div>
-                <code>brew install --cask 1password-cli</code>
-              </div>
-            </div>
-            <div class="quickstart-step">
-              <div class="step-number">2</div>
-              <div class="step-content">
-                <div class="label">Run VaultRunner setup</div>
-                <code>npx vaultrunner setup</code>
-              </div>
-            </div>
-            <div class="quickstart-step">
-              <div class="step-number">3</div>
-              <div class="step-content">
-                <div class="label">Add MCP to Claude Code</div>
-                <code>claude mcp add vaultrunner -s user -- npx vaultrunner-mcp</code>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
   </main>
 
   <footer>
     <div class="container footer-inner">
       <div class="footer-brand">
-        <img src="branding/logo.png" alt="">
-        <span>MIT License · <a href="https://anon.com">Anonymity Labs</a></span>
+        <span>Brought to you by <a href="https://anon.com" target="_blank">anon.com</a></span>
       </div>
       <div class="footer-links">
         <a href="https://github.com/anon-dot-com/vaultrunner">GitHub</a>
-        <a href="https://github.com/anon-dot-com/vaultrunner/blob/main/PRIVACY.md">Privacy</a>
         <a href="/support.html">Support</a>
       </div>
     </div>
