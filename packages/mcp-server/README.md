@@ -1,174 +1,231 @@
-# vaultrunner
+<p align="center">
+  <img src="https://raw.githubusercontent.com/anon-dot-com/vaultrunner/main/assets/branding/logo.png" alt="VaultRunner" width="120">
+  <br><br>
+  <a href="https://anon.com">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://cdn.prod.website-files.com/689bc3805f94765d37f8acd7/689e250badcbdc3397449e2e_Anon%20Official%20Logo%20-%20White.svg">
+      <source media="(prefers-color-scheme: light)" srcset="https://cdn.prod.website-files.com/689bc3805f94765d37f8acd7/689c252a7e6af0f5b331a1b1_Anon%20Brandmark%20-%20Black.svg">
+      <img alt="by Anon" src="https://cdn.prod.website-files.com/689bc3805f94765d37f8acd7/689e250badcbdc3397449e2e_Anon%20Official%20Logo%20-%20White.svg" height="24">
+    </picture>
+  </a>
+</p>
 
-The missing auth layer for Claude browser automation. Secure logins. Automatic MFA. Local credential handling.
+<p align="center">
+  <strong>Give Claude for Chrome a password manager.</strong><br>
+  Pulls from 1Password. Fills forms. Handles 2FA. Learns what works.
+</p>
 
-## Installation
+<p align="center">
+  <a href="https://github.com/anon-dot-com/vaultrunner/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License"></a>
+  <a href="https://github.com/anon-dot-com/vaultrunner/stargazers"><img src="https://img.shields.io/github/stars/anon-dot-com/vaultrunner?style=flat-square" alt="GitHub stars"></a>
+</p>
 
-```bash
-npx vaultrunner setup
-```
+<p align="center">
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#what-it-does">Features</a> •
+  <a href="#how-it-works">How It Works</a> •
+  <a href="#mcp-tools">Tools</a>
+</p>
 
-Or install globally:
-
-```bash
-npm install -g vaultrunner
-vaultrunner setup
-```
+---
 
 ## Quick Start
 
-### 1. Prerequisites
-
-- **1Password CLI** - Install with `brew install --cask 1password-cli`
-- **Claude for Chrome** - Anthropic's browser automation extension
-- **Claude Max subscription** - Required for Claude for Chrome
-
-### 2. Run Setup
+### 1. Install
 
 ```bash
 npx vaultrunner setup
+claude mcp add vaultrunner -s user -- npx -p vaultrunner vaultrunner-mcp
 ```
 
-This configures 1Password CLI integration and verifies your setup.
+### 2. Install Claude for Chrome
 
-### 3. Add to Claude Code
+[Get it from the Chrome Web Store](https://chromewebstore.google.com/detail/claude/danfoofmcgmjopflpidnpkdlphdngjgo)
 
-Add this to your Claude Code MCP configuration (`~/.claude.json`):
+### 3. Restart Claude Code
 
-```json
-{
-  "mcpServers": {
-    "vaultrunner": {
-      "command": "npx",
-      "args": ["-p", "vaultrunner", "vaultrunner-mcp"]
-    }
-  }
-}
+```bash
+claude mcp list  # Should show vaultrunner
 ```
 
 ### 4. Start Automating
 
 ```
-You: "Log into my AWS console and check EC2 instances"
+You: "Log into my AWS console"
 
-Claude: I'll log you into AWS.
-        [VaultRunner provides credentials, Claude for Chrome fills the form]
+Claude: Found 2 accounts. Which one?
+        1. work@company.com
+        2. personal@gmail.com
 
-        You're now logged in. I can see 3 running EC2 instances...
+You: "Use work"
+
+Claude: Done! You're logged into AWS.
 ```
+
+---
+
+## What It Does
+
+| Feature | Description |
+|---------|-------------|
+| **1Password Integration** | Fetches credentials via 1Password CLI |
+| **Automatic 2FA** | TOTP from 1Password, SMS from Messages, codes from Gmail |
+| **Pattern Learning** | Remembers successful login flows per site |
+| **Account Preferences** | Saves your default account per domain |
+| **Dashboard** | Web UI for login history and success rates |
+
+---
 
 ## How It Works
 
-VaultRunner is an MCP server that connects Claude to 1Password:
+VaultRunner is an MCP server that gives Claude access to your 1Password credentials:
 
-1. **VaultRunner queries 1Password** for credentials via the CLI
-2. **Claude receives the credentials** through MCP
-3. **Claude for Chrome fills the form** in your browser
-4. **2FA codes** are retrieved from 1Password TOTP, SMS, or Gmail
+```
+┌─────────────────────────────────────────────────────────────┐
+│  You: "Log into GitHub"                                      │
+│  ↓                                                           │
+│  Claude: list_logins("github.com") → VaultRunner MCP         │
+│  ↓                                                           │
+│  VaultRunner: Queries 1Password CLI                          │
+│  ↓                                                           │
+│  Claude: get_credentials(item_id) → Gets username/password   │
+│  ↓                                                           │
+│  Claude for Chrome: Fills form, clicks login                 │
+│  ↓                                                           │
+│  If 2FA needed: get_totp() or get_2fa_code() from SMS/email  │
+│  ↓                                                           │
+│  Logged in!                                                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Requirements
+
+- **Claude Max subscription** — Required for Claude Code
+- **Claude for Chrome** — [Chrome Web Store](https://chromewebstore.google.com/detail/claude/danfoofmcgmjopflpidnpkdlphdngjgo)
+- **1Password** with CLI enabled ([install guide](https://developer.1password.com/docs/cli/get-started/))
+- **Node.js 18+**
+
+### Optional (for 2FA)
+
+- **macOS Messages** — For SMS codes (requires Full Disk Access)
+- **Gmail** — For email codes (requires Google OAuth)
+
+---
+
+## MCP Tools
+
+### Credentials
+
+| Tool | Description |
+|------|-------------|
+| `get_vault_status` | Check if 1Password is authenticated |
+| `list_logins` | List accounts for a domain |
+| `get_credentials` | Get username and password |
+| `get_totp` | Get TOTP code from 1Password |
+
+### 2FA
+
+| Tool | Description |
+|------|-------------|
+| `get_2fa_code` | Read codes from SMS or email |
+
+### Preferences
+
+| Tool | Description |
+|------|-------------|
+| `set_account_preference` | Save default account per site |
+| `get_account_preference` | Get saved default |
+| `clear_account_preference` | Clear preference |
+
+### Tracking
+
+| Tool | Description |
+|------|-------------|
+| `report_login_outcome` | Report success/failure |
+| `get_login_pattern` | Get learned pattern for a domain |
+| `get_login_stats` | View history and statistics |
+
+---
 
 ## CLI Commands
 
 ```bash
-npx vaultrunner setup           # Configure 1Password integration
-npx vaultrunner status          # Check system status
-npx vaultrunner config          # Show MCP config instructions
-npx vaultrunner stats           # View login statistics
-npx vaultrunner history         # Show recent login attempts
-npx vaultrunner patterns        # Show learned login patterns
-npx vaultrunner dashboard       # Open web dashboard
-npx vaultrunner setup-gmail     # Connect Gmail for 2FA codes
-npx vaultrunner disconnect-gmail # Disconnect Gmail
-npx vaultrunner setup-messages  # Set up SMS reading (macOS)
-npx vaultrunner test-2fa        # Test 2FA code reading
-npx vaultrunner clear-history   # Clear login history
-npx vaultrunner clear-patterns  # Clear learned patterns
+# Setup
+npx vaultrunner setup              # Full setup wizard
+npx vaultrunner status             # Check system status
+
+# 2FA Configuration
+npx vaultrunner setup-messages     # Configure SMS reading (macOS)
+npx vaultrunner setup-gmail        # Connect Gmail for email 2FA
+npx vaultrunner test-2fa           # Test 2FA code reading
+
+# Dashboard & History
+npx vaultrunner dashboard          # Launch web dashboard
+npx vaultrunner stats              # View login statistics
+npx vaultrunner history            # View recent login attempts
 ```
 
-## MCP Tools
+---
 
-| Tool | Description |
-|------|-------------|
-| `get_vault_status` | Check if 1Password CLI is authenticated |
-| `list_logins` | List accounts for a domain |
-| `get_credentials` | Get username and password (auto-starts session) |
-| `get_totp` | Get TOTP code from 1Password |
-| `get_2fa_code` | Read codes from SMS/email |
-| `set_account_preference` | Save default account for a domain |
-| `get_account_preference` | Get saved default account |
-| `clear_account_preference` | Clear saved preference |
-| `report_login_outcome` | Report login result (call after every login) |
-| `get_login_pattern` | Get stored pattern for a domain |
-| `get_login_stats` | View login statistics |
+## Troubleshooting
 
-## Login Flow Example
+### "Vault not authenticated"
 
+1. Open 1Password Desktop App and unlock, OR
+2. Run `op signin` in terminal
+
+### MCP not loading
+
+1. Run `claude mcp list` to verify
+2. Restart Claude Code
+3. Check `/mcp` in Claude Code
+
+### 2FA codes not found
+
+- **SMS**: Run `vaultrunner setup-messages` and grant Full Disk Access
+- **Gmail**: Run `vaultrunner setup-gmail`
+- **TOTP**: Check that 1Password item has a one-time password
+
+---
+
+## Dashboard
+
+```bash
+npx vaultrunner dashboard
+# Opens http://localhost:19877
 ```
-1. list_logins("github.com")        # Get available accounts
-2. get_credentials(item_id)         # Get username/password [SESSION STARTS]
-3. [Claude for Chrome fills form]   # Browser automation
-4. get_totp(item_id)                # Get 2FA code if needed
-5. [Claude for Chrome fills 2FA]    # Complete login
-6. report_login_outcome(success)    # Record result [SESSION ENDS]
-```
 
-## Requirements
+Tracks login attempts, success rates, 2FA types, and learned patterns.
 
-- **1Password** with CLI access enabled
-- **Claude for Chrome** extension (requires Claude Max)
-- **Node.js 18+**
-- **macOS** (for SMS reading via Messages)
+---
 
-## 2FA Sources
+## Use Cases
 
-| Source | Setup |
-|--------|-------|
-| 1Password TOTP | Automatic if item has TOTP configured |
-| SMS (macOS) | `npx vaultrunner setup-messages` |
-| Gmail | `npx vaultrunner setup-gmail` |
+- **DevOps**: AWS, GCP, Azure consoles
+- **Social Media**: Twitter, LinkedIn
+- **SaaS**: Salesforce, HubSpot, Zendesk
+- **E-commerce**: Shopify, Amazon Seller
+- **Any authenticated workflow** Claude couldn't do before
 
-### Gmail 2FA Setup
-
-We're working on a public Gmail app for easier setup. For now, you'll need to create your own OAuth credentials:
-
-1. Go to [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials)
-2. Click **Create Credentials** > **OAuth client ID**
-3. Select **Desktop app** as application type, then **Create**
-4. Copy the **Client ID** and **Client Secret**
-5. Run setup and paste your credentials when prompted:
-   ```bash
-   npx vaultrunner setup-gmail
-   ```
-6. Verify with `npx vaultrunner test-2fa`
-
-## Security
-
-- Credentials fetched fresh from 1Password each time
-- Fully local processing - no external servers
-- Your vault, your control - requires 1Password biometric auth
-- Open source - audit every line
+---
 
 ## Development
 
-To contribute or run from source:
-
 ```bash
 git clone https://github.com/anon-dot-com/vaultrunner.git
-cd vaultrunner
-pnpm install && pnpm build
+cd vaultrunner && pnpm install && pnpm build
 
-# Run CLI commands
+# Run setup
 node packages/mcp-server/dist/cli/index.js setup
 
-# Add MCP to Claude Code (from repo root)
+# Add to Claude Code (from vaultrunner directory)
 claude mcp add vaultrunner -s user -- node $(pwd)/packages/mcp-server/dist/index.js
 ```
 
+---
+
 ## License
 
-MIT - See [LICENSE](./LICENSE)
-
-## Links
-
-- [GitHub Repository](https://github.com/anon-dot-com/vaultrunner)
-- [Full Documentation](https://github.com/anon-dot-com/vaultrunner#readme)
-- [Report Issues](https://github.com/anon-dot-com/vaultrunner/issues)
+MIT © [Anonymity Labs, Inc.](https://anon.com)
