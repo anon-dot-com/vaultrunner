@@ -51,6 +51,29 @@ ${colors.reset}${colors.dim}  1Password credentials for Claude browser automatio
 `;
 
 /**
+ * Detect if running from npm (global install or npx) vs cloned repo
+ */
+function isRunningFromNpm(): boolean {
+  // Check if we're running from a node_modules directory (npm install)
+  // or if we can't find the monorepo root (npx or global install)
+  const scriptPath = process.argv[1] || "";
+
+  // Running from node_modules indicates npm/npx install
+  if (scriptPath.includes("node_modules")) {
+    return true;
+  }
+
+  // If we can find the monorepo root with private package.json, it's a clone
+  const repoRoot = findRepoRoot();
+  if (repoRoot) {
+    return false;
+  }
+
+  // Default to npm mode if we can't determine
+  return true;
+}
+
+/**
  * Find the repo root by looking for package.json with name "vaultrunner"
  */
 function findRepoRoot(): string | null {
@@ -70,6 +93,27 @@ function findRepoRoot(): string | null {
     dir = join(dir, "..");
   }
   return null;
+}
+
+/**
+ * Get the MCP server command and args based on install context
+ */
+function getMcpConfig(): { command: string; args: string; cliCommand: string } {
+  if (isRunningFromNpm()) {
+    return {
+      command: "npx",
+      args: "vaultrunner-mcp",
+      cliCommand: "npx vaultrunner",
+    };
+  } else {
+    const repoRoot = findRepoRoot() || process.cwd();
+    const mcpPath = join(repoRoot, "packages/mcp-server/dist/index.js");
+    return {
+      command: "node",
+      args: mcpPath,
+      cliCommand: `node ${join(repoRoot, "packages/mcp-server/dist/cli/index.js")}`,
+    };
+  }
 }
 
 /**
@@ -194,11 +238,10 @@ program
       console.log("");
 
       // Show MCP configuration instructions
-      const repoRoot = findRepoRoot() || process.cwd();
-      const mcpPath = join(repoRoot, "packages/mcp-server/dist/index.js");
+      const mcpConfig = getMcpConfig();
       console.log(`${colors.bold}Add VaultRunner MCP to Claude Code:${colors.reset}`);
       console.log("");
-      console.log(`   ${colors.cyan}claude mcp add vaultrunner -s user -- node ${mcpPath}${colors.reset}`);
+      console.log(`   ${colors.cyan}claude mcp add vaultrunner -s user -- ${mcpConfig.command} ${mcpConfig.args}${colors.reset}`);
       console.log("");
       console.log(`   Or use ${colors.cyan}/mcp${colors.reset} in Claude Code and add manually.`);
       console.log("");
@@ -271,14 +314,14 @@ program
     console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
     console.log("");
 
-    const repoRoot = findRepoRoot() || process.cwd();
-    const mcpPath = join(repoRoot, "packages/mcp-server/dist/index.js");
+    const mcpConfig = getMcpConfig();
+    const isNpm = isRunningFromNpm();
 
     console.log(`${colors.bold}Option 1: Use the claude CLI (recommended)${colors.reset}`);
     console.log("");
     console.log(`   Run this command:`);
     console.log("");
-    console.log(`   ${colors.cyan}claude mcp add vaultrunner -s user -- node ${mcpPath}${colors.reset}`);
+    console.log(`   ${colors.cyan}claude mcp add vaultrunner -s user -- ${mcpConfig.command} ${mcpConfig.args}${colors.reset}`);
     console.log("");
     console.log(`   Then restart Claude Code.`);
     console.log("");
@@ -288,9 +331,13 @@ program
     console.log(`   2. Select "Add MCP Server"`);
     console.log(`   3. Configure with:`);
     console.log(`      - Name: ${colors.cyan}vaultrunner${colors.reset}`);
-    console.log(`      - Command: ${colors.cyan}node${colors.reset}`);
-    console.log(`      - Args: ${colors.cyan}${mcpPath}${colors.reset}`);
+    console.log(`      - Command: ${colors.cyan}${mcpConfig.command}${colors.reset}`);
+    console.log(`      - Args: ${colors.cyan}${mcpConfig.args}${colors.reset}`);
     console.log("");
+    if (!isNpm) {
+      console.log(`${colors.dim}   (You're running from a cloned repo. For npm users, use "npx" and "vaultrunner-mcp")${colors.reset}`);
+      console.log("");
+    }
     console.log(`${colors.bold}Verify it's working:${colors.reset}`);
     console.log("");
     console.log(`   ${colors.cyan}claude mcp list${colors.reset}        # Should show vaultrunner`);

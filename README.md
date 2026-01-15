@@ -76,53 +76,42 @@ VaultRunner is an MCP server that gives Claude access to your 1Password credenti
 
 ## Quick Start
 
-### 1. Clone and Build VaultRunner
+### Option A: Install via npm (Recommended)
+
+```bash
+npx vaultrunner setup
+claude mcp add vaultrunner -s user -- npx vaultrunner-mcp
+```
+
+### Option B: Clone and Build (for Development)
 
 ```bash
 git clone https://github.com/anon-dot-com/vaultrunner.git
 cd vaultrunner
 pnpm install && pnpm build
-```
 
-### 2. Run Setup
-
-```bash
+# Run setup
 node packages/mcp-server/dist/cli/index.js setup
-```
 
-This will:
-- Install/verify 1Password CLI
-- Check for 1Password Desktop App (recommended for biometric unlock)
-- Show you how to add the MCP to Claude Code
-
-### 3. Add VaultRunner MCP to Claude Code
-
-Run this command from the vaultrunner directory:
-
-```bash
+# Add MCP to Claude Code (from the vaultrunner directory)
 claude mcp add vaultrunner -s user -- node $(pwd)/packages/mcp-server/dist/index.js
 ```
 
-Or use `/mcp` in Claude Code and add manually:
-- **Name**: `vaultrunner`
-- **Command**: `node`
-- **Args**: `/full/path/to/vaultrunner/packages/mcp-server/dist/index.js`
+### Verify Installation
 
-### 4. Restart Claude Code
-
-Restart Claude Code to load the VaultRunner MCP. Verify it's working:
+Restart Claude Code to load the VaultRunner MCP:
 
 ```bash
 claude mcp list  # Should show vaultrunner
 ```
 
-### 5. Install Claude for Chrome
+### Install Claude for Chrome
 
 VaultRunner provides credentials; Claude for Chrome handles browser automation.
 
 Install from Chrome Web Store: [Claude for Chrome](https://chromewebstore.google.com/detail/claude/danfoofmcgmjopflpidnpkdlphdngjgo)
 
-### 6. Automate Logins
+### Start Automating Logins
 
 ```
 You: "Log into my AWS console"
@@ -180,7 +169,7 @@ Claude: [Calls get_credentials(item_id)]
 VaultRunner includes a web dashboard for monitoring login activity:
 
 ```bash
-vaultrunner dashboard
+npx vaultrunner dashboard
 # Opens http://localhost:19877
 ```
 
@@ -234,31 +223,33 @@ Sessions auto-start when `get_credentials` is called. Call `report_login_outcome
 
 ## CLI Commands
 
+If installed via npm, use `npx vaultrunner` or `vaultrunner` (if installed globally):
+
 ```bash
 # Setup
-vaultrunner setup              # Full setup wizard
-vaultrunner status             # Check system status
-vaultrunner config             # Show MCP config instructions
+npx vaultrunner setup              # Full setup wizard
+npx vaultrunner status             # Check system status
+npx vaultrunner config             # Show MCP config instructions
 
 # 2FA Configuration
-vaultrunner setup-messages     # Configure SMS reading (macOS)
-vaultrunner setup-gmail        # Connect Gmail for email 2FA
-vaultrunner disconnect-gmail   # Disconnect Gmail
-vaultrunner test-2fa           # Test 2FA code reading
+npx vaultrunner setup-messages     # Configure SMS reading (macOS)
+npx vaultrunner setup-gmail        # Connect Gmail for email 2FA
+npx vaultrunner disconnect-gmail   # Disconnect Gmail
+npx vaultrunner test-2fa           # Test 2FA code reading
 
 # Dashboard & History
-vaultrunner dashboard          # Launch web dashboard (default: port 19877)
-vaultrunner dashboard --port 8080  # Use custom port
-vaultrunner stats              # View login statistics
-vaultrunner history            # View recent login attempts
-vaultrunner patterns           # View learned login patterns
-vaultrunner clear-history      # Clear login history
-vaultrunner clear-patterns     # Clear learned patterns
+npx vaultrunner dashboard          # Launch web dashboard (default: port 19877)
+npx vaultrunner dashboard --port 8080  # Use custom port
+npx vaultrunner stats              # View login statistics
+npx vaultrunner history            # View recent login attempts
+npx vaultrunner patterns           # View learned login patterns
+npx vaultrunner clear-history      # Clear login history
+npx vaultrunner clear-patterns     # Clear learned patterns
 ```
 
-Create an alias for convenience:
+For development (cloned repo), use:
 ```bash
-alias vaultrunner="node /path/to/vaultrunner/packages/mcp-server/dist/cli/index.js"
+node packages/mcp-server/dist/cli/index.js <command>
 ```
 
 ## Troubleshooting
