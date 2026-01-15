@@ -5,7 +5,7 @@ import { loginHistory } from "../history/login-history.js";
 export const getCredentialsTool = {
   name: "get_credentials",
   description:
-    "Get username and password for a 1Password login item. Returns credentials for you to fill via browser automation (e.g., Claude for Chrome).",
+    "STEP 2: Get username and password for a 1Password login item. This auto-starts a login session for tracking. Use the returned credentials to fill the login form via browser automation. IMPORTANT: After completing (or failing) the login, ALWAYS call report_login_outcome(success) to end the session.",
   inputSchema: z.object({
     item_id: z
       .string()

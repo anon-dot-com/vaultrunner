@@ -253,11 +253,9 @@ export const getLoginStatsTool = {
  */
 export const reportLoginOutcomeTool = {
   name: "report_login_outcome",
-  description: `Report the outcome of a login attempt. Call this AFTER completing (or failing) a login.
+  description: `FINAL STEP: Report the outcome of a login attempt. ALWAYS call this after every login attempt to end the session and record the result.
 
-IMPORTANT: Always call this after a login attempt to record the outcome.
-
-Including steps is optional but recommended - it enables pattern learning for faster future logins.
+Sessions auto-start when you call get_credentials(). Including browser steps is optional but enables pattern learning for faster future logins.
 
 Example with steps (recommended):
 {

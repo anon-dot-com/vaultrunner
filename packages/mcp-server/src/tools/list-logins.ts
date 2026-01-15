@@ -7,7 +7,7 @@ import { loginHistory } from "../history/login-history.js";
 export const listLoginsTool = {
   name: "list_logins",
   description:
-    "List saved logins for a website domain. Returns account names and usernames (no passwords). Shows which account is set as the default (if any). IMPORTANT: If multiple accounts are found and no default is set, you MUST ask the user which account they want to use.",
+    "STEP 1: List saved logins for a website domain. Returns account names and usernames (no passwords). Shows which account is set as default. IMPORTANT: If multiple accounts found and no default set, ask the user which account to use. After they choose, you can save their preference with set_account_preference().",
   inputSchema: z.object({
     domain: z
       .string()
