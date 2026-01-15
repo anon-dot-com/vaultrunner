@@ -1,8 +1,4 @@
 <p align="center">
-  <img src="assets/branding/banner.png" alt="VaultRunner Banner" width="100%">
-</p>
-
-<p align="center">
   <img src="assets/branding/logo.png" alt="VaultRunner" width="120">
   <br><br>
   <a href="https://anon.com">
