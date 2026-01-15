@@ -5,7 +5,7 @@ import { loginHistory } from "../history/login-history.js";
 export const getTotpTool = {
   name: "get_totp",
   description:
-    "Get TOTP code from 1Password authenticator. Use this as FALLBACK when get_2fa_code() doesn't find a code (site uses authenticator app, not SMS/email). TOTP codes expire in 30 seconds - use immediately after retrieval.",
+    "Get TOTP code from 1Password authenticator. Use when the site asks for an authenticator app code. TOTP codes expire in 30 seconds - use immediately after retrieval.",
   inputSchema: z.object({
     item_id: z
       .string()

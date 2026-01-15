@@ -42,17 +42,9 @@ server.registerPrompt("vaultrunner_guide", {
 3. Fill username via browser automation, click Next/Submit
 4. Fill password, click Sign in
 5. If 2FA prompt appears:
-   - Try get_2fa_code() first (SMS/email)
-   - Fall back to get_totp(item_id) for authenticator apps
+   - get_2fa_code() for SMS/email codes
+   - get_totp(item_id) for authenticator app codes
 6. report_login_outcome(success) - ALWAYS call this to end session
-
-## 2FA Tips by Site
-| Site | Method | Hint |
-|------|--------|------|
-| X.com | SMS | get_2fa_code(sender: "40404") |
-| npm | Email | get_2fa_code(source: "gmail", sender: "npm") |
-| GitHub | TOTP | get_totp(item_id) |
-| Google | Varies | Try get_2fa_code() first, then TOTP |
 
 ## Multiple Accounts
 When list_logins returns multiple accounts:
