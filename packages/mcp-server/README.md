@@ -126,6 +126,20 @@ npx vaultrunner clear-patterns  # Clear learned patterns
 | SMS (macOS) | `npx vaultrunner setup-messages` |
 | Gmail | `npx vaultrunner setup-gmail` |
 
+### Gmail 2FA Setup
+
+We're working on a public Gmail app for easier setup. For now, you'll need to create your own OAuth credentials:
+
+1. Go to [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials)
+2. Click **Create Credentials** > **OAuth client ID**
+3. Select **Desktop app** as application type, then **Create**
+4. Copy the **Client ID** and **Client Secret**
+5. Run setup and paste your credentials when prompted:
+   ```bash
+   npx vaultrunner setup-gmail
+   ```
+6. Verify with `npx vaultrunner test-2fa`
+
 ## Security
 
 - Credentials fetched fresh from 1Password each time
