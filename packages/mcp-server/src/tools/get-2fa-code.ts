@@ -10,7 +10,7 @@ import { loginHistory } from "../history/login-history.js";
 
 export const get2faCodeTool = {
   name: "get_2fa_code",
-  description: "Search for 2FA verification codes in SMS (Messages) and email (Gmail). Searches configured sources automatically.",
+  description: "Get 2FA verification code from SMS (Messages) or email (Gmail). Use when the site sends a code via text or email. Searches recent messages automatically. Setup: run 'vaultrunner setup-messages' for SMS, 'vaultrunner setup-gmail' for email.",
   inputSchema: z.object({
     sender: z.string().optional().describe("Filter by sender name or address (e.g., 'Chase', 'verify@github.com')"),
     max_age_seconds: z.number().optional().default(300).describe("Maximum age of messages to search (default: 300 = 5 minutes)"),

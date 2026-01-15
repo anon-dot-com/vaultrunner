@@ -25,6 +25,36 @@ const server = new McpServer({
   version: "0.3.0",
 });
 
+// Register login guide prompt
+server.registerPrompt("vaultrunner_guide", {
+  title: "VaultRunner Login Guide",
+  description: "Complete login flow instructions for using VaultRunner tools",
+}, () => ({
+  messages: [{
+    role: "assistant" as const,
+    content: {
+      type: "text" as const,
+      text: `# VaultRunner Login Flow
+
+## Standard Flow
+1. list_logins(domain) - Get available accounts
+2. get_credentials(item_id) - Get username/password [SESSION AUTO-STARTS]
+3. Fill username via browser automation, click Next/Submit
+4. Fill password, click Sign in
+5. If 2FA prompt appears:
+   - get_2fa_code() for SMS/email codes
+   - get_totp(item_id) for authenticator app codes
+6. report_login_outcome(success) - ALWAYS call this to end session
+
+## Multiple Accounts
+When list_logins returns multiple accounts:
+1. Check for isDefault: true
+2. If none, ask the user which to use
+3. After successful login, offer to save preference with set_account_preference()`
+    }
+  }]
+}));
+
 // Register tools
 server.tool(
   vaultStatusTool.name,
