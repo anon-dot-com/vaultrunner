@@ -39,7 +39,7 @@
 
 ```bash
 npx vaultrunner setup
-claude mcp add vaultrunner -s user -- npx vaultrunner-mcp
+claude mcp add vaultrunner -s user -- npx -p vaultrunner vaultrunner-mcp
 ```
 
 ### 2. Install Claude for Chrome

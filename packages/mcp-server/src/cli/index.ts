@@ -102,7 +102,7 @@ function getMcpConfig(): { command: string; args: string; cliCommand: string } {
   if (isRunningFromNpm()) {
     return {
       command: "npx",
-      args: "vaultrunner-mcp",
+      args: "-p vaultrunner vaultrunner-mcp",
       cliCommand: "npx vaultrunner",
     };
   } else {
