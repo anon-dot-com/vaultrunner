@@ -10,18 +10,18 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-primary: #0D1117;
-      --bg-secondary: #161B22;
-      --bg-tertiary: #21262D;
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #111111;
+      --bg-tertiary: #1a1a1a;
       --text-primary: #F0F6FC;
       --text-secondary: #8B949E;
       --text-muted: #6E7681;
-      --purple: #6D72C3;
-      --purple-light: #8B8FD4;
-      --blue: #2F81F7;
-      --blue-light: #58A6FF;
-      --accent: #D97757;
-      --border: #30363D;
+      --coral: #E07850;
+      --coral-light: #F08060;
+      --cyan: #58B4D1;
+      --cyan-light: #7DD3FC;
+      --accent: #E07850;
+      --border: #2a2a2a;
       --success: #3FB950;
     }
 
@@ -44,13 +44,13 @@
     }
 
     a {
-      color: var(--blue-light);
+      color: var(--cyan-light);
       text-decoration: none;
       transition: color 0.2s;
     }
 
     a:hover {
-      color: var(--blue);
+      color: var(--cyan);
     }
 
     .container {
@@ -122,12 +122,12 @@
     }
 
     .btn-primary {
-      background: var(--purple);
+      background: var(--coral);
       color: white;
     }
 
     .btn-primary:hover {
-      background: var(--purple-light);
+      background: var(--coral-light);
       color: white;
     }
 
@@ -142,9 +142,22 @@
       border-color: var(--text-muted);
     }
 
+    /* Banner Strip */
+    .banner-strip {
+      width: 100%;
+      margin-top: 64px;
+      overflow: hidden;
+    }
+
+    .banner-strip img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
     /* Hero */
     .hero {
-      padding: 160px 0 120px;
+      padding: 80px 0 100px;
       text-align: center;
     }
 
@@ -177,7 +190,7 @@
     }
 
     .hero h1 .gradient {
-      background: linear-gradient(135deg, var(--purple) 0%, var(--blue) 100%);
+      background: linear-gradient(135deg, var(--coral) 0%, var(--coral-light) 50%, var(--cyan) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -217,7 +230,7 @@
     }
 
     .hero-code .command {
-      color: var(--blue-light);
+      color: var(--cyan-light);
     }
 
     /* Problem Section */
@@ -231,7 +244,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: var(--purple);
+      color: var(--coral);
       margin-bottom: 16px;
     }
 
@@ -293,10 +306,10 @@
       color: var(--text-secondary);
     }
 
-    .flow-icon.purple { border-color: var(--purple); }
-    .flow-icon.purple svg { color: var(--purple); }
-    .flow-icon.blue { border-color: var(--blue); }
-    .flow-icon.blue svg { color: var(--blue); }
+    .flow-icon.purple { border-color: var(--coral); }
+    .flow-icon.purple svg { color: var(--coral); }
+    .flow-icon.blue { border-color: var(--cyan); }
+    .flow-icon.blue svg { color: var(--cyan); }
     .flow-icon.accent { border-color: var(--accent); }
     .flow-icon.accent svg { color: var(--accent); }
 
@@ -322,7 +335,7 @@
     }
 
     .flow-note code {
-      color: var(--purple-light);
+      color: var(--coral-light);
       font-size: 14px;
     }
 
@@ -371,7 +384,7 @@
     .feature-icon svg {
       width: 20px;
       height: 20px;
-      color: var(--purple);
+      color: var(--coral);
     }
 
     .feature-card h3 {
@@ -431,9 +444,9 @@
 
     .code-block .comment { color: var(--text-muted); }
     .code-block .string { color: var(--success); }
-    .code-block .key { color: var(--purple-light); }
+    .code-block .key { color: var(--coral-light); }
     .code-block .prompt { color: var(--text-muted); }
-    .code-block .user { color: var(--blue-light); }
+    .code-block .user { color: var(--cyan-light); }
     .code-block .response { color: var(--text-secondary); }
 
     /* Install Section */
@@ -457,7 +470,7 @@
     .install-number {
       width: 32px;
       height: 32px;
-      background: var(--purple);
+      background: var(--coral);
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -486,7 +499,7 @@
       padding: 12px 16px;
       border-radius: 8px;
       font-size: 13px;
-      color: var(--blue-light);
+      color: var(--cyan-light);
     }
 
     /* Security Section */
@@ -649,11 +662,15 @@
   </nav>
 
   <main>
+    <div class="banner-strip">
+      <img src="branding/banner.png" alt="VaultRunner Banner">
+    </div>
     <section class="hero">
       <div class="container">
+        <img src="branding/logo.png" alt="VaultRunner" width="100" style="margin-bottom: 24px; border-radius: 50%;">
         <div class="hero-badge">
           <span class="dot"></span>
-          Works with Claude Code
+          Works with Claude for Chrome
         </div>
         <h1>
           The missing <span class="gradient">auth layer</span><br>
