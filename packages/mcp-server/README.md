@@ -147,6 +147,22 @@ We're working on a public Gmail app for easier setup. For now, you'll need to cr
 - Your vault, your control - requires 1Password biometric auth
 - Open source - audit every line
 
+## Development
+
+To contribute or run from source:
+
+```bash
+git clone https://github.com/anon-dot-com/vaultrunner.git
+cd vaultrunner
+pnpm install && pnpm build
+
+# Run CLI commands
+node packages/mcp-server/dist/cli/index.js setup
+
+# Add MCP to Claude Code (from repo root)
+claude mcp add vaultrunner -s user -- node $(pwd)/packages/mcp-server/dist/index.js
+```
+
 ## License
 
 MIT - See [LICENSE](./LICENSE)
