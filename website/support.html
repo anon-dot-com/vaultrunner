@@ -7,21 +7,21 @@
   <meta name="description" content="Get help with VaultRunner. Contact our support team or browse documentation.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-primary: #0D1117;
-      --bg-secondary: #161B22;
-      --bg-tertiary: #21262D;
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #0f0f0f;
+      --bg-tertiary: #161616;
       --text-primary: #F0F6FC;
-      --text-secondary: #8B949E;
-      --text-muted: #6E7681;
-      --purple: #6D72C3;
-      --purple-light: #8B8FD4;
-      --blue: #2F81F7;
-      --blue-light: #58A6FF;
-      --accent: #D97757;
-      --border: #30363D;
+      --text-secondary: #9CA3AF;
+      --text-muted: #6B7280;
+      --coral: #E07850;
+      --coral-light: #F08060;
+      --coral-dark: #C06040;
+      --cyan: #58B4D1;
+      --cyan-light: #7DD3FC;
+      --border: #222;
       --success: #3FB950;
       --error: #F85149;
     }
@@ -33,29 +33,23 @@
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'JetBrains Mono', monospace;
       background: var(--bg-primary);
       color: var(--text-primary);
       line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    code, pre, .mono {
-      font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
     }
 
     a {
-      color: var(--blue-light);
+      color: var(--cyan);
       text-decoration: none;
-      transition: color 0.2s;
     }
 
     a:hover {
-      color: var(--blue);
+      color: var(--cyan-light);
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1100px;
       margin: 0 auto;
       padding: 0 24px;
     }
@@ -67,46 +61,46 @@
       left: 0;
       right: 0;
       z-index: 100;
-      background: rgba(13, 17, 23, 0.8);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
+      background: var(--bg-primary);
+      border-bottom: 4px solid var(--coral);
     }
 
     .nav-inner {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      height: 64px;
+      height: 60px;
     }
 
     .nav-logo {
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-weight: 600;
-      font-size: 18px;
-      color: var(--text-primary);
+      gap: 12px;
+      font-family: 'VT323', monospace;
+      font-size: 24px;
+      color: var(--coral);
+      letter-spacing: 0.1em;
     }
 
-    .nav-logo svg {
-      width: 28px;
-      height: 28px;
+    .nav-logo img {
+      width: 36px;
+      height: 36px;
+      image-rendering: pixelated;
     }
 
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 32px;
+      gap: 24px;
     }
 
     .nav-links a {
       color: var(--text-secondary);
       font-size: 14px;
-      font-weight: 500;
     }
 
     .nav-links a:hover {
-      color: var(--text-primary);
+      color: var(--coral);
     }
 
     .btn {
@@ -114,53 +108,45 @@
       align-items: center;
       gap: 8px;
       padding: 10px 20px;
-      border-radius: 8px;
-      font-weight: 500;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
       font-size: 14px;
-      transition: all 0.2s;
       border: none;
       cursor: pointer;
+      transition: all 0.1s;
     }
 
     .btn-primary {
-      background: var(--purple);
-      color: white;
+      background: var(--coral);
+      color: var(--bg-primary);
+      border: 4px solid var(--coral-dark);
+      border-top-color: var(--coral-light);
+      border-left-color: var(--coral-light);
     }
 
     .btn-primary:hover {
-      background: var(--purple-light);
-      color: white;
-    }
-
-    .btn-secondary {
-      background: var(--bg-tertiary);
-      color: var(--text-primary);
-      border: 1px solid var(--border);
-    }
-
-    .btn-secondary:hover {
-      background: var(--bg-secondary);
-      border-color: var(--text-muted);
+      background: var(--coral-light);
+      transform: translate(-2px, -2px);
+      box-shadow: 4px 4px 0 var(--coral-dark);
     }
 
     /* Page Header */
     .page-header {
-      padding: 140px 0 60px;
+      padding: 120px 0 40px;
       text-align: center;
+      border-bottom: 4px solid var(--border);
     }
 
     .page-header h1 {
-      font-size: 48px;
-      font-weight: 700;
-      margin-bottom: 16px;
-      letter-spacing: -0.02em;
+      font-family: 'VT323', monospace;
+      font-size: 56px;
+      margin-bottom: 12px;
+      color: var(--coral);
     }
 
     .page-header p {
-      font-size: 18px;
+      font-size: 16px;
       color: var(--text-secondary);
-      max-width: 560px;
-      margin: 0 auto;
     }
 
     /* Support Grid */
@@ -168,7 +154,7 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 48px;
-      padding: 60px 0 100px;
+      padding: 60px 0;
     }
 
     @media (max-width: 900px) {
@@ -179,56 +165,55 @@
 
     /* Contact Form */
     .contact-section h2 {
-      font-size: 24px;
-      font-weight: 600;
+      font-family: 'VT323', monospace;
+      font-size: 28px;
       margin-bottom: 8px;
+      color: var(--text-primary);
     }
 
     .contact-section > p {
       color: var(--text-secondary);
       font-size: 14px;
-      margin-bottom: 32px;
+      margin-bottom: 24px;
     }
 
     .contact-form {
       background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 32px;
+      border: 4px solid var(--border);
+      padding: 28px;
     }
 
     .form-group {
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
 
     .form-group label {
       display: block;
-      font-size: 14px;
-      font-weight: 500;
+      font-size: 12px;
+      font-weight: 600;
       margin-bottom: 8px;
-      color: var(--text-primary);
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
     }
 
     .form-group input,
     .form-group textarea,
     .form-group select {
       width: 100%;
-      padding: 12px 16px;
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      padding: 12px 14px;
+      background: var(--bg-primary);
+      border: 3px solid var(--border);
       color: var(--text-primary);
-      font-family: inherit;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 14px;
-      transition: border-color 0.2s, box-shadow 0.2s;
     }
 
     .form-group input:focus,
     .form-group textarea:focus,
     .form-group select:focus {
       outline: none;
-      border-color: var(--purple);
-      box-shadow: 0 0 0 3px rgba(109, 114, 195, 0.2);
+      border-color: var(--coral);
     }
 
     .form-group input::placeholder,
@@ -237,93 +222,88 @@
     }
 
     .form-group textarea {
-      min-height: 140px;
+      min-height: 120px;
       resize: vertical;
     }
 
     .form-group select {
       cursor: pointer;
       appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238B949E' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 12px center;
       padding-right: 40px;
     }
 
-    .form-group select option {
-      background: var(--bg-tertiary);
-      color: var(--text-primary);
-    }
-
     .form-submit {
       width: 100%;
       padding: 14px 24px;
-      background: var(--purple);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 15px;
+      background: var(--coral);
+      color: var(--bg-primary);
+      border: 4px solid var(--coral-dark);
+      border-top-color: var(--coral-light);
+      border-left-color: var(--coral-light);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.1s;
     }
 
     .form-submit:hover {
-      background: var(--purple-light);
-    }
-
-    .form-submit:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+      background: var(--coral-light);
+      transform: translate(-2px, -2px);
+      box-shadow: 4px 4px 0 var(--coral-dark);
     }
 
     .form-note {
       margin-top: 16px;
-      font-size: 13px;
+      font-size: 12px;
       color: var(--text-muted);
       text-align: center;
     }
 
     /* Resources Section */
     .resources-section h2 {
-      font-size: 24px;
-      font-weight: 600;
+      font-family: 'VT323', monospace;
+      font-size: 28px;
       margin-bottom: 8px;
+      color: var(--text-primary);
     }
 
     .resources-section > p {
       color: var(--text-secondary);
       font-size: 14px;
-      margin-bottom: 32px;
+      margin-bottom: 24px;
     }
 
     .resource-cards {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
     }
 
     .resource-card {
       display: flex;
       align-items: flex-start;
       gap: 16px;
-      padding: 20px;
+      padding: 16px;
       background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      transition: border-color 0.2s;
+      border: 3px solid var(--border);
+      transition: all 0.1s;
     }
 
     .resource-card:hover {
-      border-color: var(--text-muted);
+      border-color: var(--coral);
+      transform: translate(-2px, -2px);
+      box-shadow: 4px 4px 0 var(--coral-dark);
     }
 
     .resource-icon {
       width: 40px;
       height: 40px;
-      background: var(--bg-tertiary);
-      border-radius: 10px;
+      background: var(--bg-primary);
+      border: 3px solid var(--coral);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -331,14 +311,14 @@
     }
 
     .resource-icon svg {
-      width: 20px;
-      height: 20px;
-      color: var(--purple);
+      width: 18px;
+      height: 18px;
+      color: var(--coral);
     }
 
     .resource-content h3 {
-      font-size: 15px;
-      font-weight: 600;
+      font-family: 'VT323', monospace;
+      font-size: 20px;
       margin-bottom: 4px;
     }
 
@@ -347,31 +327,32 @@
     }
 
     .resource-content h3 a:hover {
-      color: var(--blue-light);
+      color: var(--coral);
     }
 
     .resource-content p {
-      font-size: 14px;
+      font-size: 13px;
       color: var(--text-secondary);
     }
 
     /* FAQ Section */
     .faq-section {
-      padding: 80px 0;
-      border-top: 1px solid var(--border);
+      padding: 60px 0;
+      border-top: 4px solid var(--border);
     }
 
     .faq-section h2 {
-      font-size: 32px;
-      font-weight: 700;
-      margin-bottom: 48px;
+      font-family: 'VT323', monospace;
+      font-size: 40px;
+      margin-bottom: 40px;
       text-align: center;
+      color: var(--text-primary);
     }
 
     .faq-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 32px;
+      gap: 24px;
       max-width: 900px;
       margin: 0 auto;
     }
@@ -382,90 +363,101 @@
       }
     }
 
+    .faq-item {
+      background: var(--bg-secondary);
+      border: 3px solid var(--border);
+      padding: 20px;
+    }
+
     .faq-item h3 {
-      font-size: 16px;
-      font-weight: 600;
+      font-family: 'VT323', monospace;
+      font-size: 18px;
       margin-bottom: 8px;
+      color: var(--coral);
     }
 
     .faq-item p {
-      font-size: 14px;
+      font-size: 13px;
       color: var(--text-secondary);
       line-height: 1.6;
     }
 
     .faq-item code {
-      background: var(--bg-secondary);
+      background: var(--bg-primary);
       padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 13px;
-      color: var(--blue-light);
+      border: 2px solid var(--border);
+      font-size: 12px;
+      color: var(--cyan);
     }
 
     /* Footer */
     footer {
-      border-top: 1px solid var(--border);
-      padding: 48px 0;
+      padding: 40px 0;
+      border-top: 4px solid var(--border);
     }
 
     .footer-inner {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 24px;
     }
 
     .footer-brand {
       display: flex;
       align-items: center;
       gap: 12px;
+      font-size: 14px;
+      color: var(--text-muted);
     }
 
-    .footer-brand span {
-      color: var(--text-muted);
-      font-size: 14px;
+    .footer-brand img {
+      width: 24px;
+      height: 24px;
+      image-rendering: pixelated;
     }
 
     .footer-links {
       display: flex;
-      align-items: center;
       gap: 24px;
     }
 
     .footer-links a {
-      color: var(--text-secondary);
       font-size: 14px;
+      color: var(--text-secondary);
     }
 
     .footer-links a:hover {
-      color: var(--text-primary);
+      color: var(--coral);
     }
 
     /* Success/Error States */
     .form-status {
-      padding: 16px;
-      border-radius: 8px;
-      margin-bottom: 24px;
-      font-size: 14px;
+      padding: 14px;
+      border: 3px solid;
+      margin-bottom: 20px;
+      font-size: 13px;
       display: none;
     }
 
     .form-status.success {
       display: block;
       background: rgba(63, 185, 80, 0.1);
-      border: 1px solid rgba(63, 185, 80, 0.3);
+      border-color: var(--success);
       color: var(--success);
     }
 
     .form-status.error {
       display: block;
       background: rgba(248, 81, 73, 0.1);
-      border: 1px solid rgba(248, 81, 73, 0.3);
+      border-color: var(--error);
       color: var(--error);
     }
 
     @media (max-width: 600px) {
       .page-header h1 {
-        font-size: 32px;
+        font-size: 40px;
       }
 
       .nav-links {
@@ -474,7 +466,6 @@
 
       .footer-inner {
         flex-direction: column;
-        gap: 24px;
         text-align: center;
       }
     }
@@ -484,18 +475,14 @@
   <nav>
     <div class="container nav-inner">
       <a href="/" class="nav-logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
-        VaultRunner
+        <img src="branding/logo.png" alt="">
+        VAULTRUNNER
       </a>
       <div class="nav-links">
         <a href="/#features">Features</a>
         <a href="/#install">Install</a>
-        <a href="/#security">Security</a>
         <a href="https://github.com/anon-dot-com/vaultrunner" target="_blank">GitHub</a>
-        <a href="https://github.com/anon-dot-com/vaultrunner#quick-start" class="btn btn-primary">Get Started</a>
+        <a href="/#install" class="btn btn-primary">Get Started</a>
       </div>
     </div>
   </nav>
@@ -503,8 +490,8 @@
   <main>
     <section class="page-header">
       <div class="container">
-        <h1>Support</h1>
-        <p>Need help with VaultRunner? Browse our resources or send us a message.</p>
+        <h1>SUPPORT</h1>
+        <p>Need help? Browse resources or send us a message.</p>
       </div>
     </section>
 
@@ -512,12 +499,11 @@
       <div class="support-grid">
         <div class="contact-section">
           <h2>Contact Us</h2>
-          <p>Send us a message and we'll get back to you as soon as possible.</p>
+          <p>Send us a message and we'll respond within 24-48 hours.</p>
 
           <form class="contact-form" action="https://formsubmit.co/dm@team.anon.com" method="POST" id="contact-form">
             <div id="form-status" class="form-status"></div>
 
-            <!-- FormSubmit.co configuration -->
             <input type="hidden" name="_subject" value="VaultRunner Support Request">
             <input type="hidden" name="_captcha" value="false">
             <input type="hidden" name="_template" value="table">
@@ -550,10 +536,10 @@
 
             <div class="form-group">
               <label for="message">Message</label>
-              <textarea id="message" name="message" placeholder="Describe your issue or question..." required></textarea>
+              <textarea id="message" name="message" placeholder="Describe your issue..." required></textarea>
             </div>
 
-            <button type="submit" class="form-submit">Send Message</button>
+            <button type="submit" class="form-submit">SEND MESSAGE</button>
 
             <p class="form-note">We typically respond within 24-48 hours.</p>
           </form>
@@ -575,7 +561,7 @@
               </div>
               <div class="resource-content">
                 <h3><a href="https://github.com/anon-dot-com/vaultrunner#readme" target="_blank">Documentation</a></h3>
-                <p>Complete setup guide, API reference, and troubleshooting tips.</p>
+                <p>Setup guide, API reference, troubleshooting.</p>
               </div>
             </div>
 
@@ -589,7 +575,7 @@
               </div>
               <div class="resource-content">
                 <h3><a href="https://github.com/anon-dot-com/vaultrunner/issues" target="_blank">GitHub Issues</a></h3>
-                <p>Report bugs, request features, or browse existing discussions.</p>
+                <p>Report bugs or request features.</p>
               </div>
             </div>
 
@@ -601,7 +587,7 @@
               </div>
               <div class="resource-content">
                 <h3><a href="https://github.com/anon-dot-com/vaultrunner/discussions" target="_blank">Discussions</a></h3>
-                <p>Ask questions, share tips, and connect with other users.</p>
+                <p>Ask questions and share tips.</p>
               </div>
             </div>
 
@@ -613,22 +599,7 @@
               </div>
               <div class="resource-content">
                 <h3><a href="https://github.com/anon-dot-com/vaultrunner/security" target="_blank">Security</a></h3>
-                <p>Report security vulnerabilities responsibly.</p>
-              </div>
-            </div>
-
-            <div class="resource-card">
-              <div class="resource-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-              </div>
-              <div class="resource-content">
-                <h3><a href="https://github.com/anon-dot-com/vaultrunner/releases" target="_blank">Changelog</a></h3>
-                <p>See what's new in the latest releases.</p>
+                <p>Report vulnerabilities responsibly.</p>
               </div>
             </div>
           </div>
@@ -638,37 +609,37 @@
 
     <section class="faq-section">
       <div class="container">
-        <h2>Frequently Asked Questions</h2>
+        <h2>FAQ</h2>
 
         <div class="faq-grid">
           <div class="faq-item">
-            <h3>How do I install the 1Password CLI?</h3>
-            <p>On macOS, run <code>brew install --cask 1password-cli</code>. For other platforms, visit the <a href="https://1password.com/downloads/command-line/" target="_blank">1Password CLI downloads page</a>.</p>
+            <h3>How do I install 1Password CLI?</h3>
+            <p>On macOS: <code>brew install --cask 1password-cli</code></p>
           </div>
 
           <div class="faq-item">
-            <h3>Why isn't VaultRunner filling my password?</h3>
-            <p>Make sure 1Password is unlocked and the CLI is authenticated. Run <code>npx vaultrunner status</code> to check your setup.</p>
+            <h3>Password not filling?</h3>
+            <p>Make sure 1Password is unlocked. Run <code>npx vaultrunner status</code> to check.</p>
           </div>
 
           <div class="faq-item">
-            <h3>How do I enable SMS code reading?</h3>
-            <p>On macOS, grant Full Disk Access to your terminal app in System Preferences → Privacy & Security. This allows reading from the Messages database.</p>
+            <h3>How do I enable SMS codes?</h3>
+            <p>Grant Full Disk Access to your terminal in System Preferences → Privacy & Security.</p>
           </div>
 
           <div class="faq-item">
-            <h3>Is my data sent to any servers?</h3>
-            <p>No. VaultRunner runs entirely locally. Your credentials never leave your machine and are never sent to any external servers.</p>
+            <h3>Is my data sent anywhere?</h3>
+            <p>No. Everything runs locally. Credentials never leave your machine.</p>
           </div>
 
           <div class="faq-item">
-            <h3>Does Claude see my passwords?</h3>
-            <p>Claude receives credentials from VaultRunner via MCP and uses Claude for Chrome to fill forms. All processing happens locally on your machine—nothing is sent to external servers.</p>
+            <h3>Does Claude see passwords?</h3>
+            <p>Claude uses VaultRunner via MCP to fill forms locally. Nothing goes to external servers.</p>
           </div>
 
           <div class="faq-item">
-            <h3>How do I update VaultRunner?</h3>
-            <p>The MCP server updates automatically via npx. Run <code>npx vaultrunner@latest setup</code> to ensure you have the latest version.</p>
+            <h3>How do I update?</h3>
+            <p>Run <code>npx vaultrunner@latest setup</code> for the latest version.</p>
           </div>
         </div>
       </div>
@@ -678,11 +649,8 @@
   <footer>
     <div class="container footer-inner">
       <div class="footer-brand">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
-        <span>MIT License · <a href="https://anon.com">Anonymity Labs, Inc.</a></span>
+        <img src="branding/logo.png" alt="">
+        <span>MIT License · <a href="https://anon.com">Anonymity Labs</a></span>
       </div>
       <div class="footer-links">
         <a href="https://github.com/anon-dot-com/vaultrunner">GitHub</a>
@@ -693,14 +661,12 @@
   </footer>
 
   <script>
-    // Check if returning from successful form submission
     const urlParams = new URLSearchParams(window.location.search);
     const status = document.getElementById('form-status');
 
     if (urlParams.get('submitted') === 'true') {
       status.className = 'form-status success';
-      status.textContent = 'Thanks for your message! We\'ll get back to you soon.';
-      // Clean up URL
+      status.textContent = 'Thanks! We\'ll get back to you soon.';
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   </script>
