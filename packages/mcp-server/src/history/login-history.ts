@@ -1,6 +1,11 @@
 /**
  * Login History
  * Tracks login attempts and their outcomes for learning and debugging
+ *
+ * Data Quality Tiers:
+ * - gold: Claude reported outcome + browser steps (full analytics, pattern learning)
+ * - silver: Claude reported outcome only (success/fail known, no pattern)
+ * - bronze: Auto-tracked only (domain, account, 2FA type known; outcome unknown)
  */
 
 import * as fs from "fs";
@@ -24,6 +29,9 @@ export interface ToolStep {
   result: "success" | "failed";
 }
 
+// Data quality tier
+export type DataQuality = "gold" | "silver" | "bronze";
+
 export interface LoginAttempt {
   id: string;
   domain: string;
@@ -37,6 +45,9 @@ export interface LoginAttempt {
   accountUsed?: string;
   twoFactorType?: "totp" | "sms" | "email" | "none";
   error?: string;
+  // Data quality tracking
+  dataQuality: DataQuality;
+  autoStarted: boolean;  // Was this session auto-started?
 }
 
 export interface LoginHistory {
@@ -49,21 +60,67 @@ export interface LoginStats {
   totalAttempts: number;
   successCount: number;
   failedCount: number;
+  abandonedCount: number;
   successRate: number;
   byDomain: Record<string, { total: number; success: number; rate: number }>;
   twoFactorBreakdown: Record<string, number>;
+  dataQualityBreakdown: Record<DataQuality, number>;
 }
 
 const HISTORY_DIR = path.join(os.homedir(), ".vaultrunner");
 const HISTORY_FILE = path.join(HISTORY_DIR, "login-history.json");
 const MAX_HISTORY_ENTRIES = 500;
+const SESSION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 class LoginHistoryManager {
   private history: LoginHistory;
   private currentAttempt: LoginAttempt | null = null;
+  private sessionTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.history = this.loadHistory();
+  }
+
+  /**
+   * Reset session timeout - called whenever activity occurs
+   */
+  private resetSessionTimeout(): void {
+    if (this.sessionTimeoutId) {
+      clearTimeout(this.sessionTimeoutId);
+    }
+    if (this.currentAttempt) {
+      this.sessionTimeoutId = setTimeout(() => {
+        this.autoEndSession("Session timed out after 5 minutes of inactivity");
+      }, SESSION_TIMEOUT_MS);
+    }
+  }
+
+  /**
+   * Auto-end session (for timeout or new session starting)
+   */
+  private autoEndSession(reason: string): void {
+    if (!this.currentAttempt) return;
+
+    // If outcome is still in_progress, mark as abandoned with bronze quality
+    if (this.currentAttempt.outcome === "in_progress") {
+      this.currentAttempt.completedAt = new Date().toISOString();
+      this.currentAttempt.outcome = "abandoned";
+      this.currentAttempt.error = reason;
+      this.currentAttempt.dataQuality = "bronze";
+      if (!this.currentAttempt.twoFactorType) {
+        this.currentAttempt.twoFactorType = "none";
+      }
+
+      // Save to history
+      this.history.attempts.push(this.currentAttempt);
+      this.saveHistory();
+    }
+
+    if (this.sessionTimeoutId) {
+      clearTimeout(this.sessionTimeoutId);
+      this.sessionTimeoutId = null;
+    }
+    this.currentAttempt = null;
   }
 
   private loadHistory(): LoginHistory {
@@ -105,12 +162,12 @@ class LoginHistoryManager {
   }
 
   /**
-   * Start a new login session
+   * Start a new login session (explicit - called via start_login_session tool)
    */
   startSession(domain: string, loginUrl?: string): string {
     // If there's an existing session, abandon it
     if (this.currentAttempt) {
-      this.endSession(false, undefined, "Abandoned - new session started");
+      this.autoEndSession("Abandoned - new session started");
     }
 
     const id = this.generateId();
@@ -122,8 +179,61 @@ class LoginHistoryManager {
       outcome: "in_progress",
       toolSteps: [],
       browserSteps: [],
+      dataQuality: "bronze", // Will be upgraded when reported
+      autoStarted: false,
     };
+    this.resetSessionTimeout();
     return id;
+  }
+
+  /**
+   * Auto-start a session (called when get_credentials is used without an active session)
+   * This enables tracking even when Claude forgets to call start_login_session
+   */
+  autoStartSession(domain: string, accountUsed?: string, loginUrl?: string): string {
+    // If there's an existing session for a DIFFERENT domain, end it first
+    if (this.currentAttempt && this.currentAttempt.domain !== domain) {
+      this.autoEndSession("Auto-ended - new login to different domain");
+    }
+
+    // If there's already a session for the same domain, just update it
+    if (this.currentAttempt && this.currentAttempt.domain === domain) {
+      if (accountUsed) {
+        this.currentAttempt.accountUsed = accountUsed;
+      }
+      this.resetSessionTimeout();
+      return this.currentAttempt.id;
+    }
+
+    const id = this.generateId();
+    this.currentAttempt = {
+      id,
+      domain,
+      loginUrl,
+      startedAt: new Date().toISOString(),
+      outcome: "in_progress",
+      toolSteps: [],
+      browserSteps: [],
+      accountUsed,
+      dataQuality: "bronze", // Auto-started = bronze until reported
+      autoStarted: true,
+    };
+    this.resetSessionTimeout();
+    return id;
+  }
+
+  /**
+   * Check if there's an active session
+   */
+  hasActiveSession(): boolean {
+    return this.currentAttempt !== null;
+  }
+
+  /**
+   * Check if there's an active session for a specific domain
+   */
+  hasActiveSessionForDomain(domain: string): boolean {
+    return this.currentAttempt !== null && this.currentAttempt.domain === domain;
   }
 
   /**
@@ -144,6 +254,9 @@ class LoginHistoryManager {
     if (!this.currentAttempt) {
       return; // No active session
     }
+
+    // Reset timeout on activity
+    this.resetSessionTimeout();
 
     // Sanitize params
     const sanitizedParams = this.sanitizeParams(params);
@@ -173,6 +286,16 @@ class LoginHistoryManager {
   }
 
   /**
+   * Set the 2FA type for the current session (can be called by tools)
+   */
+  setTwoFactorType(type: "totp" | "sms" | "email"): void {
+    if (this.currentAttempt) {
+      this.currentAttempt.twoFactorType = type;
+      this.resetSessionTimeout();
+    }
+  }
+
+  /**
    * Remove sensitive data from params
    */
   private sanitizeParams(params: Record<string, unknown>): Record<string, unknown> {
@@ -193,7 +316,11 @@ class LoginHistoryManager {
   }
 
   /**
-   * End the current session
+   * End the current session (explicit - via report_login_outcome or end_login_session)
+   * Data quality:
+   * - gold: success reported with browser steps
+   * - silver: success reported without browser steps
+   * - bronze: auto-ended (timeout, new session, abandoned)
    */
   endSession(
     success: boolean,
@@ -204,10 +331,19 @@ class LoginHistoryManager {
       return null;
     }
 
+    // Clear timeout
+    if (this.sessionTimeoutId) {
+      clearTimeout(this.sessionTimeoutId);
+      this.sessionTimeoutId = null;
+    }
+
     this.currentAttempt.completedAt = new Date().toISOString();
     this.currentAttempt.outcome = success ? "success" : "failed";
-    if (browserSteps) {
+    if (browserSteps && browserSteps.length > 0) {
       this.currentAttempt.browserSteps = browserSteps;
+      this.currentAttempt.dataQuality = "gold"; // Best quality: reported with steps
+    } else {
+      this.currentAttempt.dataQuality = "silver"; // Good quality: reported outcome
     }
     if (error) {
       this.currentAttempt.error = error;
@@ -237,6 +373,7 @@ class LoginHistoryManager {
 
     const successCount = attempts.filter((a) => a.outcome === "success").length;
     const failedCount = attempts.filter((a) => a.outcome === "failed").length;
+    const abandonedCount = attempts.filter((a) => a.outcome === "abandoned").length;
 
     // Stats by domain
     const byDomain: Record<string, { total: number; success: number; rate: number }> = {};
@@ -262,13 +399,26 @@ class LoginHistoryManager {
       twoFactorBreakdown[type] = (twoFactorBreakdown[type] || 0) + 1;
     }
 
+    // Data quality breakdown
+    const dataQualityBreakdown: Record<DataQuality, number> = {
+      gold: 0,
+      silver: 0,
+      bronze: 0,
+    };
+    for (const attempt of attempts) {
+      const quality = attempt.dataQuality || "bronze"; // Default old records to bronze
+      dataQualityBreakdown[quality]++;
+    }
+
     return {
       totalAttempts: attempts.length,
       successCount,
       failedCount,
+      abandonedCount,
       successRate: attempts.length > 0 ? successCount / attempts.length : 0,
       byDomain,
       twoFactorBreakdown,
+      dataQualityBreakdown,
     };
   }
 

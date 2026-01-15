@@ -53,10 +53,10 @@ export const get2faCodeTool = {
       const messagesResult = searchMessagesForCode(searchOptions);
 
       if (messagesResult.found && messagesResult.code) {
-        // Auto-log if session is active
-        const session = loginHistory.getCurrentSession();
-        if (session) {
+        // Auto-log and set 2FA type (works for auto-started sessions too)
+        if (loginHistory.hasActiveSession()) {
           loginHistory.logToolStep("get_2fa_code", { source: "messages", sender: messagesResult.sender }, "success");
+          loginHistory.setTwoFactorType("sms");
         }
 
         return {
@@ -82,10 +82,10 @@ export const get2faCodeTool = {
       const gmailResult = await searchGmailForCode(searchOptions);
 
       if (gmailResult.found && gmailResult.code) {
-        // Auto-log if session is active
-        const session = loginHistory.getCurrentSession();
-        if (session) {
+        // Auto-log and set 2FA type (works for auto-started sessions too)
+        if (loginHistory.hasActiveSession()) {
           loginHistory.logToolStep("get_2fa_code", { source: "gmail", sender: gmailResult.sender }, "success");
+          loginHistory.setTwoFactorType("email");
         }
 
         return {
@@ -109,8 +109,7 @@ export const get2faCodeTool = {
 
     // No code found in any source
     // Auto-log failure if session is active
-    const session = loginHistory.getCurrentSession();
-    if (session) {
+    if (loginHistory.hasActiveSession()) {
       loginHistory.logToolStep("get_2fa_code", { source, configuredSources }, "failed");
     }
 

@@ -246,6 +246,21 @@
       color: var(--text-muted);
     }
 
+    .badge.gold {
+      background: rgba(255, 215, 0, 0.15);
+      color: #ffd700;
+    }
+
+    .badge.silver {
+      background: rgba(192, 192, 192, 0.15);
+      color: #c0c0c0;
+    }
+
+    .badge.bronze {
+      background: rgba(205, 127, 50, 0.15);
+      color: #cd7f32;
+    }
+
     .domain-link {
       color: var(--accent-blue);
       text-decoration: none;
@@ -554,7 +569,33 @@
       </div>
     </div>
 
+    <!-- Data Quality Breakdown -->
+    <div class="section-title" style="margin-bottom: 12px;">Data Quality</div>
+    <div class="twofa-grid" id="quality-grid" style="margin-bottom: 24px;">
+      <div class="twofa-card">
+        <div class="icon">🥇</div>
+        <div class="count" id="quality-gold">0</div>
+        <div class="label">Gold</div>
+      </div>
+      <div class="twofa-card">
+        <div class="icon">🥈</div>
+        <div class="count" id="quality-silver">0</div>
+        <div class="label">Silver</div>
+      </div>
+      <div class="twofa-card">
+        <div class="icon">🥉</div>
+        <div class="count" id="quality-bronze">0</div>
+        <div class="label">Bronze</div>
+      </div>
+      <div class="twofa-card">
+        <div class="icon">❓</div>
+        <div class="count" id="quality-abandoned">0</div>
+        <div class="label">Abandoned</div>
+      </div>
+    </div>
+
     <!-- 2FA Breakdown -->
+    <div class="section-title" style="margin-bottom: 12px;">2FA Methods</div>
     <div class="twofa-grid" id="twofa-grid">
       <div class="twofa-card">
         <div class="icon">🔐</div>
@@ -572,7 +613,7 @@
         <div class="label">Email</div>
       </div>
       <div class="twofa-card">
-        <div class="icon">❌</div>
+        <div class="icon">➖</div>
         <div class="count" id="twofa-none">0</div>
         <div class="label">None</div>
       </div>
@@ -597,13 +638,14 @@
               <th>Domain</th>
               <th>Account</th>
               <th>Outcome</th>
+              <th>Quality</th>
               <th>2FA</th>
               <th>Steps</th>
               <th>Time</th>
             </tr>
           </thead>
           <tbody id="history-table">
-            <tr><td colspan="6" class="empty-state">Loading...</td></tr>
+            <tr><td colspan="7" class="empty-state">Loading...</td></tr>
           </tbody>
         </table>
       </div>
@@ -692,6 +734,12 @@
         document.getElementById('stat-failed').textContent = data.attempts.failed;
         document.getElementById('stat-patterns').textContent = data.patterns.total;
 
+        // Data quality breakdown
+        document.getElementById('quality-gold').textContent = data.dataQuality?.gold || 0;
+        document.getElementById('quality-silver').textContent = data.dataQuality?.silver || 0;
+        document.getElementById('quality-bronze').textContent = data.dataQuality?.bronze || 0;
+        document.getElementById('quality-abandoned').textContent = data.attempts.abandoned || 0;
+
         // 2FA breakdown
         document.getElementById('twofa-totp').textContent = data.twoFactor.totp || 0;
         document.getElementById('twofa-sms').textContent = data.twoFactor.sms || 0;
@@ -700,6 +748,12 @@
       } catch (err) {
         console.error('Failed to load stats:', err);
       }
+    }
+
+    // Format data quality badge
+    function formatQualityBadge(quality) {
+      const icons = { gold: '🥇', silver: '🥈', bronze: '🥉' };
+      return `<span class="badge ${quality || 'bronze'}">${icons[quality] || '🥉'} ${quality || 'bronze'}</span>`;
     }
 
     // Load history
@@ -711,7 +765,7 @@
         const tbody = document.getElementById('history-table');
 
         if (data.attempts.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No login attempts yet. Use VaultRunner to log into sites.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No login attempts yet. Use VaultRunner to log into sites.</td></tr>';
           return;
         }
 
@@ -725,6 +779,7 @@
             </td>
             <td>${a.accountUsed || '-'}</td>
             <td><span class="badge ${a.outcome}">${a.outcome}</span></td>
+            <td>${formatQualityBadge(a.dataQuality)}</td>
             <td><span class="badge ${a.twoFactorType || 'none'}">${a.twoFactorType || 'none'}</span></td>
             <td>${(a.toolStepCount || 0) + (a.browserStepCount || 0)}</td>
             <td><span class="time-ago">${timeAgo(a.startedAt)}</span></td>
@@ -733,7 +788,7 @@
       } catch (err) {
         console.error('Failed to load history:', err);
         document.getElementById('history-table').innerHTML =
-          '<tr><td colspan="6" class="empty-state">Failed to load history</td></tr>';
+          '<tr><td colspan="7" class="empty-state">Failed to load history</td></tr>';
       }
     }
 

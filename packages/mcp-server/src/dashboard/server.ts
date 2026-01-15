@@ -30,6 +30,8 @@ interface ToolStep {
   result: "success" | "failed";
 }
 
+type DataQuality = "gold" | "silver" | "bronze";
+
 interface LoginAttempt {
   id: string;
   domain: string;
@@ -42,6 +44,8 @@ interface LoginAttempt {
   accountUsed?: string;
   twoFactorType?: "totp" | "sms" | "email" | "none";
   error?: string;
+  dataQuality?: DataQuality;
+  autoStarted?: boolean;
 }
 
 interface LoginHistory {
@@ -112,6 +116,7 @@ function calculateStats(history: LoginHistory) {
   const completed = history.attempts.filter((a) => a.outcome !== "in_progress");
   const successful = completed.filter((a) => a.outcome === "success");
   const failed = completed.filter((a) => a.outcome === "failed");
+  const abandoned = completed.filter((a) => a.outcome === "abandoned");
   const domains = new Set(history.attempts.map((a) => a.domain));
 
   // 2FA breakdown
@@ -119,6 +124,17 @@ function calculateStats(history: LoginHistory) {
   for (const attempt of completed) {
     const type = attempt.twoFactorType || "none";
     twoFactorCounts[type] = (twoFactorCounts[type] || 0) + 1;
+  }
+
+  // Data quality breakdown
+  const dataQualityCounts: Record<DataQuality, number> = {
+    gold: 0,
+    silver: 0,
+    bronze: 0,
+  };
+  for (const attempt of completed) {
+    const quality = attempt.dataQuality || "bronze"; // Default old records to bronze
+    dataQualityCounts[quality]++;
   }
 
   // Per-domain stats
@@ -140,9 +156,11 @@ function calculateStats(history: LoginHistory) {
     totalAttempts: completed.length,
     successCount: successful.length,
     failedCount: failed.length,
+    abandonedCount: abandoned.length,
     successRate: completed.length > 0 ? successful.length / completed.length : 0,
     uniqueDomains: domains.size,
     twoFactorBreakdown: twoFactorCounts,
+    dataQualityBreakdown: dataQualityCounts,
     byDomain,
   };
 }
@@ -172,6 +190,7 @@ export function startDashboard(port: number = DEFAULT_PORT): Promise<void> {
           total: stats.totalAttempts,
           success: stats.successCount,
           failed: stats.failedCount,
+          abandoned: stats.abandonedCount,
           successRate: stats.successRate,
           uniqueSites: stats.uniqueDomains,
         },
@@ -179,6 +198,7 @@ export function startDashboard(port: number = DEFAULT_PORT): Promise<void> {
           total: patternCount,
         },
         twoFactor: stats.twoFactorBreakdown,
+        dataQuality: stats.dataQualityBreakdown,
         byDomain: stats.byDomain,
       });
     });
@@ -208,6 +228,8 @@ export function startDashboard(port: number = DEFAULT_PORT): Promise<void> {
           twoFactorType: a.twoFactorType,
           accountUsed: a.accountUsed,
           error: a.error,
+          dataQuality: a.dataQuality || "bronze",
+          autoStarted: a.autoStarted || false,
         })),
         total: attempts.length,
       });
