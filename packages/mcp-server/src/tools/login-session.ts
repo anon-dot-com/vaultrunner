@@ -245,15 +245,11 @@ export const getLoginStatsTool = {
 };
 
 /**
- * Report Login Outcome Tool (NEW - simplified reporting)
+ * Report Login Outcome Tool
  *
  * This is the PRIMARY tool Claude should use after completing a login.
- * It's simpler than end_login_session and upgrades data quality from bronze to silver/gold.
- *
- * Data quality tiers:
- * - bronze: Auto-tracked (Claude forgot to report)
- * - silver: Claude reported success/fail (this tool without steps)
- * - gold: Claude reported with browser steps (this tool with steps)
+ * Sessions auto-start when get_credentials() is called.
+ * This tool ends the session and records the outcome.
  */
 export const reportLoginOutcomeTool = {
   name: "report_login_outcome",
@@ -261,9 +257,7 @@ export const reportLoginOutcomeTool = {
 
 IMPORTANT: Always call this after a login attempt to record the outcome.
 
-Data quality:
-- Without steps: "silver" quality (success/fail known)
-- With steps: "gold" quality (enables pattern learning for faster future logins)
+Including steps is optional but recommended - it enables pattern learning for faster future logins.
 
 Example with steps (recommended):
 {
@@ -348,10 +342,8 @@ Example without steps (minimum):
             pattern_saved: patternSaved,
           },
           message: patternSaved
-            ? `✓ Login recorded (gold quality) - pattern saved for ${completed.domain}`
-            : steps && steps.length > 0
-              ? `✓ Login recorded (gold quality) for ${completed.domain}`
-              : `✓ Login recorded (silver quality) for ${completed.domain}`,
+            ? `✓ Login recorded - pattern saved for ${completed.domain}`
+            : `✓ Login recorded for ${completed.domain}`,
         }, null, 2),
       }],
     };
