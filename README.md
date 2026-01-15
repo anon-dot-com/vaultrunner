@@ -1,8 +1,4 @@
 <p align="center">
-  <img src="assets/branding/banner.png" alt="VaultRunner Banner" width="100%">
-</p>
-
-<p align="center">
   <img src="assets/branding/logo.png" alt="VaultRunner" width="120">
   <br><br>
   <a href="https://anon.com">
@@ -42,7 +38,7 @@ npx vaultrunner setup
 claude mcp add vaultrunner -s user -- npx vaultrunner-mcp
 ```
 
-### 2. Install Claude for Chrome
+### 2. Install Claude for Chrome (unless you have it already)
 
 [Get it from the Chrome Web Store](https://chromewebstore.google.com/detail/claude/danfoofmcgmjopflpidnpkdlphdngjgo)
 
