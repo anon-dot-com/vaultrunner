@@ -31,6 +31,8 @@
 
 ## Quick Start
 
+> **No cloning required!** Install directly via npm. Only clone if you want to contribute.
+
 ### 1. Install
 
 ```bash
@@ -40,7 +42,7 @@ claude mcp add vaultrunner -s user -- npx -p vaultrunner vaultrunner-mcp
 
 ### 2. Install Claude for Chrome
 
-[Get it from the Chrome Web Store](https://chromewebstore.google.com/detail/claude/danfoofmcgmjopflpidnpkdlphdngjgo)
+[Get it from the Chrome Web Store](https://chromewebstore.google.com/detail/claude/fcoeoabgfenejglbffodgkkbkcdhcgfn)
 
 ### 3. Restart Claude Code
 
@@ -103,7 +105,7 @@ VaultRunner is an MCP server that gives Claude access to your 1Password credenti
 ## Requirements
 
 - **Claude Max subscription** — Required for Claude Code
-- **Claude for Chrome** — [Chrome Web Store](https://chromewebstore.google.com/detail/claude/danfoofmcgmjopflpidnpkdlphdngjgo)
+- **Claude for Chrome** — [Chrome Web Store](https://chromewebstore.google.com/detail/claude/fcoeoabgfenejglbffodgkkbkcdhcgfn)
 - **1Password** with CLI enabled ([install guide](https://developer.1password.com/docs/cli/get-started/))
 - **Node.js 18+**
 
@@ -211,18 +213,27 @@ Tracks login attempts, success rates, 2FA types, and learned patterns.
 
 ---
 
-## Development
+## Development (Contributing)
+
+<details>
+<summary><strong>Click to expand</strong> — Only for contributors. Most users should use the <a href="#quick-start">Quick Start</a> instead.</summary>
+
+<br>
+
+> **⚠️ Do not mix npm and local builds.** If you cloned the repo, use the commands below. Do not run `npx vaultrunner` from inside the cloned repo — it will fail.
 
 ```bash
 git clone https://github.com/anon-dot-com/vaultrunner.git
 cd vaultrunner && pnpm install && pnpm build
 
-# Run setup
+# Run setup (use local build, NOT npx)
 node packages/mcp-server/dist/cli/index.js setup
 
-# Add to Claude Code (from vaultrunner directory)
+# Add to Claude Code (use local build, NOT npx)
 claude mcp add vaultrunner -s user -- node $(pwd)/packages/mcp-server/dist/index.js
 ```
+
+</details>
 
 ---
 
