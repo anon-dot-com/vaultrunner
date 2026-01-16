@@ -21,11 +21,12 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp -r src/dashboard/public dist/dashboard/",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "cp ../../README.md . && npm run build"
+    "prepublishOnly": "cp ../../README.md . && npm run build",
+    "postinstall": "echo '' && echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && echo '✓ VaultRunner installed!' && echo '' && echo 'Requirements:' && echo '  • Claude Max subscription (for Claude Code + Claude for Chrome)' && echo '  • 1Password Desktop App (for biometric unlock)' && echo '' && echo 'Next: Run \"vaultrunner setup\" for full setup instructions.' && echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && echo ''"
   },
   "keywords": [
     "1password",

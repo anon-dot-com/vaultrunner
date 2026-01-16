@@ -148,11 +148,12 @@ export function searchMessagesForCode(options: {
     }
 
     // Quick filter for messages that might contain codes
-    candidates = candidates.filter(m => likelyContainsCode(m.text));
+    // Now passes sender for more flexible matching
+    candidates = candidates.filter(m => likelyContainsCode(m.text, m.sender));
 
     // Try to extract code from each candidate
     for (const message of candidates) {
-      const extracted = extractCode(message.text);
+      const extracted = extractCode(message.text, message.sender);
       if (extracted) {
         return {
           found: true,

@@ -70,7 +70,7 @@ export interface LoginStats {
 const HISTORY_DIR = path.join(os.homedir(), ".vaultrunner");
 const HISTORY_FILE = path.join(HISTORY_DIR, "login-history.json");
 const MAX_HISTORY_ENTRIES = 500;
-const SESSION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes (increased from 5)
 
 class LoginHistoryManager {
   private history: LoginHistory;
@@ -121,6 +121,47 @@ class LoginHistoryManager {
       this.sessionTimeoutId = null;
     }
     this.currentAttempt = null;
+  }
+
+  /**
+   * Create a retroactive session for logging purposes
+   * Use this when a login was completed but no session was active
+   */
+  createRetroactiveSession(
+    domain: string,
+    success: boolean,
+    browserSteps?: BrowserStep[],
+    metadata?: {
+      accountUsed?: string;
+      twoFactorType?: "totp" | "sms" | "email" | "none";
+      loginUrl?: string;
+      error?: string;
+      learnings?: string;
+    }
+  ): LoginAttempt {
+    const id = this.generateId();
+    const now = new Date().toISOString();
+
+    const attempt: LoginAttempt = {
+      id,
+      domain,
+      loginUrl: metadata?.loginUrl,
+      startedAt: now,
+      completedAt: now,
+      outcome: success ? "success" : "failed",
+      toolSteps: [],
+      browserSteps: browserSteps || [],
+      accountUsed: metadata?.accountUsed,
+      twoFactorType: metadata?.twoFactorType || "none",
+      error: metadata?.error,
+      dataQuality: browserSteps && browserSteps.length > 0 ? "gold" : "silver",
+      autoStarted: false,
+    };
+
+    this.history.attempts.push(attempt);
+    this.saveHistory();
+
+    return attempt;
   }
 
   private loadHistory(): LoginHistory {
