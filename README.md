@@ -215,12 +215,9 @@ Tracks login attempts, success rates, 2FA types, and learned patterns.
 
 ## Development (Contributing)
 
-<details>
-<summary><strong>Click to expand</strong> — Only for contributors. Most users should use the <a href="#quick-start">Quick Start</a> instead.</summary>
-
-<br>
-
-> **⚠️ Do not mix npm and local builds.** If you cloned the repo, use the commands below. Do not run `npx vaultrunner` from inside the cloned repo — it will fail.
+> **For contributors only.** Most users should use the [Quick Start](#quick-start) instead.
+>
+> **Do not mix npm and local builds.** If you cloned the repo, use the commands below. Do not run `npx vaultrunner` from inside the cloned repo — it will fail.
 
 ```bash
 git clone https://github.com/anon-dot-com/vaultrunner.git
@@ -232,8 +229,6 @@ node packages/mcp-server/dist/cli/index.js setup
 # Add to Claude Code (use local build, NOT npx)
 claude mcp add vaultrunner -s user -- node $(pwd)/packages/mcp-server/dist/index.js
 ```
-
-</details>
 
 ---
 
