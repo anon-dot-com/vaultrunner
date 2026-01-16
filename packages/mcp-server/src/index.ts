@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 
+import { createRequire } from "node:module";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+
+const require = createRequire(import.meta.url);
+const { version } = require("../package.json");
 import { vaultStatusTool } from "./tools/vault-status.js";
 import { listLoginsTool } from "./tools/list-logins.js";
 import { getCredentialsTool } from "./tools/get-credentials.js";
@@ -22,7 +26,7 @@ import {
 
 const server = new McpServer({
   name: "vaultrunner",
-  version: "0.3.0",
+  version,
 });
 
 // Register login guide prompt
