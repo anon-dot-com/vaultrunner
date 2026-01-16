@@ -28,6 +28,9 @@ pnpm-debug.log*
 # TypeScript
 *.tsbuildinfo
 
+# Generated files (copied from root during publish)
+packages/mcp-server/README.md
+
 # Chrome extension
 *.crx
 *.pem
