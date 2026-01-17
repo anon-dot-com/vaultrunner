@@ -80,16 +80,6 @@ const STORE_FILE = path.join(STORE_DIR, "rules.json");
 const DEFAULT_GLOBAL_RULES: Omit<Rule, "id" | "createdAt" | "updatedAt">[] = [
   {
     scope: "global",
-    trigger: "after_click_field",
-    action: "press_escape",
-    reason: "Dismiss password manager autofill dropdowns (1Password, LastPass, etc.)",
-    enabled: true,
-    priority: 100,
-    successCount: 0,
-    failureCount: 0,
-  },
-  {
-    scope: "global",
     trigger: "before_fill_field",
     action: "wait",
     actionParams: { duration: 300 },

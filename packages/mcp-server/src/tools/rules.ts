@@ -65,12 +65,13 @@ Rules help VaultRunner learn and improve login automation over time.
 - navigate_to_url: Navigate to a specific URL
 - custom: Custom instruction for Claude
 
-Example: Add global rule to press Escape after clicking fields:
+Example: Add global rule to wait before filling fields:
 {
   "scope": "global",
-  "trigger": "after_click_field",
-  "action": "press_escape",
-  "reason": "Dismiss 1Password autofill dropdown"
+  "trigger": "before_fill_field",
+  "action": "wait",
+  "action_params": { "duration": 500 },
+  "reason": "Let page JS settle before typing"
 }
 
 Example: Add domain rule for specific login URL:
