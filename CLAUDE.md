@@ -18,6 +18,40 @@
 
 ---
 
+## CRITICAL: Use TodoWrite to Enforce Login Reporting
+
+**Problem:** Claude forgets to call `report_login_outcome` after successful logins. When Claude completes a login flow and sees the dashboard/success screen, it mentally marks the task "done" and moves on—without calling `report_login_outcome`. This leaves login sessions untracked.
+
+**Solution:** Use TodoWrite to enforce the reporting step.
+
+When Claude starts a login flow, it **must** create a todo list that includes "Report login outcome to VaultRunner" as the final item. The login is not complete until that todo is marked done.
+
+### Required todo structure for every login:
+
+```
+1. List logins from 1Password [completed]
+2. Get credentials and navigate to login page [completed]
+3. Enter username/email and proceed [completed]
+4. Enter password and submit [completed]
+5. Handle 2FA if required [completed]
+6. Report login outcome to VaultRunner [in_progress] ← CANNOT skip this
+```
+
+### Key behaviors:
+
+1. **Create the todo list immediately** when starting a login flow—before calling `get_credentials`
+2. **"Report login outcome" must always be the final todo item**
+3. **Do not mark it complete** until `report_login_outcome` is actually called
+4. **Call `report_login_outcome` BEFORE taking a confirmation screenshot**—the visual confirmation creates a false sense of completion
+
+### Why this works:
+
+- The todo list creates visible accountability
+- Claude cannot mentally "finish" until all todos are checked
+- The explicit final step prevents the dopamine-driven shortcut of "I see the dashboard, I'm done"
+
+---
+
 ## Tools
 
 | Tool | Purpose |

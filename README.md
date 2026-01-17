@@ -104,15 +104,34 @@ VaultRunner is an MCP server that gives Claude access to your 1Password credenti
 
 ## Requirements
 
-- **Claude Max subscription** — Required for Claude Code
+### Required
+
+- **Claude Max subscription** — Required for Claude Code and Claude for Chrome
 - **Claude for Chrome** — [Chrome Web Store](https://chromewebstore.google.com/detail/claude/fcoeoabgfenejglbffodgkkbkcdhcgfn)
 - **1Password** with CLI enabled ([install guide](https://developer.1password.com/docs/cli/get-started/))
+- **1Password Desktop App** — Required for biometric unlock and seamless CLI authentication
 - **Node.js 18+**
 
 ### Optional (for 2FA)
 
 - **macOS Messages** — For SMS codes (requires Full Disk Access)
 - **Gmail** — For email codes (requires Google OAuth)
+
+---
+
+## Recommended Settings
+
+### 1Password Chrome Extension
+
+If you have the 1Password Chrome extension installed, it can interfere with Claude for Chrome's browser automation by showing autofill dropdowns that block form fields.
+
+**To fix this:**
+
+1. Right-click the 1Password extension icon in Chrome
+2. Select **"This Can Read and Change Site Data"**
+3. Change from "On all sites" to **"When you click the extension"**
+
+This prevents 1Password from automatically showing dropdowns during automation while still letting you use it manually when needed. VaultRunner already handles credentials via the 1Password CLI, so you don't need the extension's autofill during automated logins.
 
 ---
 

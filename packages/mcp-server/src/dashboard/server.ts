@@ -14,6 +14,7 @@ import * as path from "path";
 const VAULTRUNNER_DIR = path.join(os.homedir(), ".vaultrunner");
 const HISTORY_FILE = path.join(VAULTRUNNER_DIR, "login-history.json");
 const PATTERNS_FILE = path.join(VAULTRUNNER_DIR, "login-patterns.json");
+const RULES_FILE = path.join(VAULTRUNNER_DIR, "rules.json");
 
 interface BrowserStep {
   action: "fill_field" | "click_button" | "wait" | "navigate";
@@ -71,6 +72,71 @@ interface PatternStore {
   patterns: Record<string, LoginPattern>;
 }
 
+type RuleTrigger =
+  | "before_fill_field"
+  | "after_click_field"
+  | "before_click_button"
+  | "before_login"
+  | "after_login"
+  | "on_2fa_prompt"
+  | "on_error"
+  | "always";
+
+type RuleAction =
+  | "press_escape"
+  | "wait"
+  | "click_elsewhere"
+  | "use_password_login"
+  | "use_sms_2fa"
+  | "use_totp_2fa"
+  | "dismiss_popup"
+  | "navigate_to_url"
+  | "custom";
+
+interface Rule {
+  id: string;
+  scope: "global" | "domain";
+  domain?: string;
+  trigger: RuleTrigger;
+  action: RuleAction;
+  actionParams?: {
+    duration?: number;
+    url?: string;
+    instruction?: string;
+    fieldType?: string;
+  };
+  reason: string;
+  priority: number;
+  enabled: boolean;
+  successCount: number;
+  failureCount: number;
+  createdAt: string;
+  updatedAt: string;
+  learnedFrom?: {
+    date: string;
+    context: string;
+  };
+}
+
+interface DomainInsight {
+  domain: string;
+  loginUrl?: string;
+  notes: string[];
+  quirks: string[];
+  lastUpdated: string;
+}
+
+interface RulesStore {
+  version: string;
+  lastUpdated: string;
+  // New format (from rules-store.ts)
+  globalRules?: Rule[];
+  domainRules?: Record<string, Rule[]>;
+  domainInsights?: Record<string, DomainInsight>;
+  // Old format (for backwards compatibility)
+  rules?: Rule[];
+}
+
 /**
  * Read login history directly from disk (fresh data on each request)
  */
@@ -106,6 +172,27 @@ function readPatternsFromDisk(): PatternStore {
     version: "1.0",
     lastUpdated: new Date().toISOString(),
     patterns: {},
+  };
+}
+
+/**
+ * Read rules directly from disk (fresh data on each request)
+ */
+function readRulesFromDisk(): RulesStore {
+  try {
+    if (fs.existsSync(RULES_FILE)) {
+      const data = fs.readFileSync(RULES_FILE, "utf-8");
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error("Failed to read rules:", error);
+  }
+  return {
+    version: "1.0",
+    lastUpdated: new Date().toISOString(),
+    globalRules: [],
+    domainRules: {},
+    domainInsights: {},
   };
 }
 
@@ -315,24 +402,202 @@ export function startDashboard(port: number = DEFAULT_PORT): Promise<void> {
       }
     });
 
+    // API: Get all rules and insights
+    app.get("/api/rules", (_req: Request, res: Response) => {
+      const rulesData = readRulesFromDisk();
+
+      // Handle both new format (globalRules/domainRules) and old format (rules array)
+      let globalRules: Rule[] = [];
+      let rulesByDomain: Record<string, Rule[]> = {};
+
+      if (rulesData.globalRules) {
+        // New format from rules-store.ts
+        globalRules = rulesData.globalRules;
+        rulesByDomain = rulesData.domainRules || {};
+      } else if (rulesData.rules) {
+        // Old flat format
+        globalRules = rulesData.rules.filter((r) => r.scope === "global");
+        const domainRulesList = rulesData.rules.filter((r) => r.scope === "domain");
+        for (const rule of domainRulesList) {
+          const domain = rule.domain || "unknown";
+          if (!rulesByDomain[domain]) {
+            rulesByDomain[domain] = [];
+          }
+          rulesByDomain[domain].push(rule);
+        }
+      }
+
+      // Handle domainInsights - could be Record or Array
+      let insightsList: DomainInsight[] = [];
+      if (rulesData.domainInsights) {
+        if (Array.isArray(rulesData.domainInsights)) {
+          insightsList = rulesData.domainInsights;
+        } else {
+          // Convert Record to Array
+          insightsList = Object.values(rulesData.domainInsights);
+        }
+      }
+
+      const domainRulesCount = Object.values(rulesByDomain).reduce(
+        (sum, rules) => sum + rules.length,
+        0
+      );
+
+      res.json({
+        globalRules: globalRules.map((r) => ({
+          id: r.id,
+          trigger: r.trigger,
+          action: r.action,
+          actionParams: r.actionParams,
+          reason: r.reason,
+          priority: r.priority,
+          enabled: r.enabled,
+          successCount: r.successCount,
+          failureCount: r.failureCount,
+          createdAt: r.createdAt,
+        })),
+        domainRules: rulesByDomain,
+        domainInsights: insightsList,
+        summary: {
+          totalRules: globalRules.length + domainRulesCount,
+          globalCount: globalRules.length,
+          domainCount: domainRulesCount,
+          insightsCount: insightsList.length,
+        },
+      });
+    });
+
+    // API: Toggle rule enabled status
+    app.post("/api/rules/:id/toggle", (req: Request, res: Response) => {
+      const rulesData = readRulesFromDisk();
+      const ruleId = req.params.id;
+      let found = false;
+      let newEnabled = false;
+
+      // Search in globalRules
+      if (rulesData.globalRules) {
+        const idx = rulesData.globalRules.findIndex((r) => r.id === ruleId);
+        if (idx !== -1) {
+          rulesData.globalRules[idx].enabled = !rulesData.globalRules[idx].enabled;
+          rulesData.globalRules[idx].updatedAt = new Date().toISOString();
+          newEnabled = rulesData.globalRules[idx].enabled;
+          found = true;
+        }
+      }
+
+      // Search in domainRules
+      if (!found && rulesData.domainRules) {
+        for (const domain of Object.keys(rulesData.domainRules)) {
+          const idx = rulesData.domainRules[domain].findIndex((r) => r.id === ruleId);
+          if (idx !== -1) {
+            rulesData.domainRules[domain][idx].enabled = !rulesData.domainRules[domain][idx].enabled;
+            rulesData.domainRules[domain][idx].updatedAt = new Date().toISOString();
+            newEnabled = rulesData.domainRules[domain][idx].enabled;
+            found = true;
+            break;
+          }
+        }
+      }
+
+      if (!found) {
+        res.status(404).json({ success: false, error: "Rule not found" });
+        return;
+      }
+
+      rulesData.lastUpdated = new Date().toISOString();
+
+      try {
+        fs.writeFileSync(RULES_FILE, JSON.stringify(rulesData, null, 2));
+        res.json({
+          success: true,
+          enabled: newEnabled,
+          message: `Rule ${newEnabled ? "enabled" : "disabled"}`,
+        });
+      } catch (error) {
+        res.status(500).json({ success: false, error: "Failed to toggle rule" });
+      }
+    });
+
+    // API: Delete a rule
+    app.delete("/api/rules/:id", (req: Request, res: Response) => {
+      const rulesData = readRulesFromDisk();
+      const ruleId = req.params.id;
+      let found = false;
+
+      // Search in globalRules
+      if (rulesData.globalRules) {
+        const idx = rulesData.globalRules.findIndex((r) => r.id === ruleId);
+        if (idx !== -1) {
+          rulesData.globalRules.splice(idx, 1);
+          found = true;
+        }
+      }
+
+      // Search in domainRules
+      if (!found && rulesData.domainRules) {
+        for (const domain of Object.keys(rulesData.domainRules)) {
+          const idx = rulesData.domainRules[domain].findIndex((r) => r.id === ruleId);
+          if (idx !== -1) {
+            rulesData.domainRules[domain].splice(idx, 1);
+            found = true;
+            break;
+          }
+        }
+      }
+
+      if (!found) {
+        res.status(404).json({ success: false, error: "Rule not found" });
+        return;
+      }
+
+      rulesData.lastUpdated = new Date().toISOString();
+
+      try {
+        fs.writeFileSync(RULES_FILE, JSON.stringify(rulesData, null, 2));
+        res.json({ success: true, message: "Rule deleted" });
+      } catch (error) {
+        res.status(500).json({ success: false, error: "Failed to delete rule" });
+      }
+    });
+
+    // API: Clear all rules (keeps default global rules)
+    app.post("/api/rules/clear", (_req: Request, res: Response) => {
+      const emptyRules = {
+        version: "1.0",
+        lastUpdated: new Date().toISOString(),
+        globalRules: [],
+        domainRules: {},
+        domainInsights: {},
+      };
+      try {
+        fs.writeFileSync(RULES_FILE, JSON.stringify(emptyRules, null, 2));
+        res.json({ success: true, message: "Rules cleared (default rules will be recreated on next MCP server start)" });
+      } catch (error) {
+        res.status(500).json({ success: false, error: "Failed to clear rules" });
+      }
+    });
+
     // API: Debug data dump
     app.get("/api/debug/raw", (_req: Request, res: Response) => {
       const history = readHistoryFromDisk();
       const patterns = readPatternsFromDisk();
+      const rules = readRulesFromDisk();
 
       res.json({
         timestamp: new Date().toISOString(),
         loginHistory: history,
         patterns: patterns,
+        rules: rules,
         paths: {
           historyFile: HISTORY_FILE,
           patternsFile: PATTERNS_FILE,
+          rulesFile: RULES_FILE,
         },
       });
     });
 
     // Serve index.html for all other routes (SPA)
-    app.get("/*", (_req: Request, res: Response) => {
+    app.use((_req: Request, res: Response) => {
       res.sendFile(join(__dirname, "public", "index.html"));
     });
 

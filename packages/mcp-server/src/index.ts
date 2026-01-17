@@ -23,6 +23,7 @@ import {
   getLoginStatsTool,
   reportLoginOutcomeTool,
 } from "./tools/login-session.js";
+import { rulesTools } from "./tools/rules.js";
 
 const server = new McpServer({
   name: "vaultrunner",
@@ -150,6 +151,56 @@ server.tool(
   reportLoginOutcomeTool.description,
   reportLoginOutcomeTool.inputSchema.shape,
   reportLoginOutcomeTool.handler
+);
+
+// Rules tools
+server.tool(
+  rulesTools.add_rule.name,
+  rulesTools.add_rule.description,
+  rulesTools.add_rule.inputSchema.shape,
+  rulesTools.add_rule.handler
+);
+
+server.tool(
+  rulesTools.get_rules.name,
+  rulesTools.get_rules.description,
+  rulesTools.get_rules.inputSchema.shape,
+  rulesTools.get_rules.handler
+);
+
+server.tool(
+  rulesTools.remove_rule.name,
+  rulesTools.remove_rule.description,
+  rulesTools.remove_rule.inputSchema.shape,
+  rulesTools.remove_rule.handler
+);
+
+server.tool(
+  rulesTools.toggle_rule.name,
+  rulesTools.toggle_rule.description,
+  rulesTools.toggle_rule.inputSchema.shape,
+  rulesTools.toggle_rule.handler
+);
+
+server.tool(
+  rulesTools.add_domain_insight.name,
+  rulesTools.add_domain_insight.description,
+  rulesTools.add_domain_insight.inputSchema.shape,
+  rulesTools.add_domain_insight.handler
+);
+
+server.tool(
+  rulesTools.record_rule_outcome.name,
+  rulesTools.record_rule_outcome.description,
+  rulesTools.record_rule_outcome.inputSchema.shape,
+  rulesTools.record_rule_outcome.handler
+);
+
+server.tool(
+  rulesTools.get_rules_summary.name,
+  rulesTools.get_rules_summary.description,
+  rulesTools.get_rules_summary.inputSchema.shape,
+  rulesTools.get_rules_summary.handler
 );
 
 // Handle shutdown

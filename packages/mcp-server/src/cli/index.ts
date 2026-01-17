@@ -247,6 +247,25 @@ program
       console.log("");
       console.log(`   3. Restart Claude Code to load VaultRunner MCP`);
       console.log("");
+
+      // Show requirements reminder
+      console.log(`${colors.yellow}${colors.bold}Requirements:${colors.reset}`);
+      console.log(`   • ${colors.bold}Claude Max subscription${colors.reset} — Required for Claude Code and Claude for Chrome`);
+      console.log(`   • ${colors.bold}1Password Desktop App${colors.reset} — Required for biometric unlock with the CLI`);
+      console.log("");
+
+      // Show 1Password extension recommendation
+      console.log(`${colors.yellow}${colors.bold}Recommended: Configure 1Password Chrome Extension${colors.reset}`);
+      console.log(`   The 1Password Chrome extension can interfere with browser automation`);
+      console.log(`   by showing autofill dropdowns that block form fields.`);
+      console.log("");
+      console.log(`   ${colors.bold}To fix:${colors.reset}`);
+      console.log(`   1. Right-click the 1Password extension icon in Chrome`);
+      console.log(`   2. Select "This Can Read and Change Site Data"`);
+      console.log(`   3. Change to "${colors.cyan}When you click the extension${colors.reset}"`);
+      console.log("");
+      console.log(`   This improves all browser automation, including logins.`);
+      console.log("");
     } else {
       console.log(`${colors.yellow}${colors.bold}! Some requirements need attention${colors.reset}`);
       console.log(`   Please install the missing components above.`);
